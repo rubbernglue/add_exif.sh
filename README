@@ -1,8 +1,25 @@
-When starting this script you will be prompted about which files to look for: ""
+###############################################################################
+#                                                                             #
+#                                ADD_EXIF.SH                                  #
+#                                                                             #
+###############################################################################
+
+Tested on Linux and Mac, demands 'exiv2' and 'dialog' and then programs which
+normally exists in *nix based systems like; awk/sed/echo/while/for and so on.
 
      
 -------------------------------------------------------
 
+
+     
+
+
+
+
+When starting this script you will be prompted about which files to look for,
+Simply put I set it to list tif-files, unless there are no tif's it will list jpg.
+
+     
 
 -------------------------------------------------------
 
