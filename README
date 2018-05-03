@@ -4,6 +4,49 @@
 #                                                                             #
 ###############################################################################
 
+What this script does is in the end creating script-files for each and every
+image. When the script runs it opens a menu in which you can chose which type of
+data you want to add, and when the script is done you have been given a bunch
+of files in your current directory by the side of your image-files. These
+generated files can be ran sepparately or edited as you like and looks like this
+depending on what you have added of course:
+
+
+exiv2 -M"del Exif.Photo.DateTimeOriginal"             ./367_Delta3200_09*.???
+exiv2 -M"set Exif.Photo.DateTimeOriginal 2018:04:26 18:42" ./367_Delta3200_09*.???
+exiv2 -M"del Exif.Photo.ExposureProgram"       ./367_Delta3200_09*.???
+exiv2 -M"set Exif.Photo.ExposureProgram 1" ./367_Delta3200_09*.???
+exiv2 -M"add Exif.Photo.FNumber Rational 8/1" modify  ./367_Delta3200_08*.???
+exiv2 -M"del Exif.Photo.ExposureTime Rational" modify      ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Photo.ExposureTime Rational 1/125" modify ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Photo.LensModel MAMIYA-SEKOR C 1:1.9 f=80mm" modify        ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Photo.FocalLength Rational 80/1" modify ./367_Delta3200_08*.???
+exiv2 -M"del Exif.Photo.ISOSpeedRatings"      ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Photo.ISOSpeedRatings 6400" ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Photo.UserComment Film: Ilford Delta" modify ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Photo.UserComment Home developed using Ilford Ilfotec DD-X" modify ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Photo.UserComment Roll-id 367" modify ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Image.Model 645 ProTL" modify             ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Image.Make Mamiya" modify               ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Image.Software Gimp 2.8" modify                 ./367_Delta3200_08*.???
+exiv2 -M"add Exif.Photo.UserComment Scanned with: Epson Perfection V700" modify ./367_Delta3200_08*.???
+exiv2 -M"del Exif.Image.Artist" 		 ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Image.Artist foobar@gmail.com"           ./367_Delta3200_08*.???
+exiv2 -M"set Exif.Image.Copyright foobar@gmail.com" modify ./367_Delta3200_08*.???
+ 
+# GPS Data:
+exiv2 -M"del Exif.GPSInfo.GPSLatitudeRef" modify        ./367_Delta3200_08*.???
+exiv2 -M"add Exif.GPSInfo.GPSLatitudeRef N" modify        ./367_Delta3200_08*.???
+exiv2 -M"del Exif.GPSInfo.GPSLongitudeRef" modify     ./367_Delta3200_08*.???
+exiv2 -M"add Exif.GPSInfo.GPSLongitudeRef E" modify     ./367_Delta3200_08*.???
+exiv2 -M"set Exif.GPSInfo.GPSLatitude 60/1 20/1 349/10" modify     ./367_Delta3200_08*.???
+exiv2 -M"set Exif.GPSInfo.GPSLongitude 19/1 3/1 226/10" modify     ./367_Delta3200_08*.???
+# GPS End.
+
+
+
+
+
 Tested on Linux and Mac, demands 'exiv2' and 'dialog' and then programs which
 normally exists in *nix based systems like; awk/sed/echo/while/for and so on.
 
@@ -55,3 +98,4 @@ In the end of the generated lines this is executed for ./foobar*.??? which simpl
 
 
 -------------------------------------------------------
+   
