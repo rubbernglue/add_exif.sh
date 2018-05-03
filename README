@@ -7,18 +7,16 @@
 Tested on Linux and Mac, demands 'exiv2' and 'dialog' and then programs which
 normally exists in *nix based systems like; awk/sed/echo/while/for and so on.
 
-     
--------------------------------------------------------
+The only (for some annoying) problem at the moment is that filenames with spaces:
+foobar 01.jpg  <--- are NOT accepted!
 
 
-     
 
 
 
 
 When starting this script you will be prompted about which files to look for,
 Simply put I set it to list tif-files, unless there are no tif's it will list jpg.
-
      
 
 -------------------------------------------------------
