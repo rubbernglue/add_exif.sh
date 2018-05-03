@@ -1,0 +1,42 @@
+When starting this script you will be prompted about which files to look for: ""
+
+     
+-------------------------------------------------------
+
+
+-------------------------------------------------------
+
+Removing data from generated files:
+
+add_exiv.sh -r
+
+Enter the menu and chose what kind of data you wish to remove and Enter.
+It was made in order to simply easier remove chunks of faulty data from files.
+
+-------------------------------------------------------
+
+LENSMODEL
+
+This uses a automatically updated configuration file in (home-dir)/.add_exif.config/lenses
+using this format:
+
+M42?Schneider-Kreuznach Xenar f:3.5 F=5cm!50
+
+M42 <-- refers to the mount i this case, mind aswell be "NIKON"
+The Questionmark is a devider to the actual lens-name, just as the exclamation-mark at the end, which devids for the actual focal-length!
+
+-------------------------------------------------------
+
+
+-------------------------------------------------------
+
+The generated script-files look like this:
+
+exiv2 -M"del Exif.Photo.ExposureTime Rational" modify      ./foobar*.???
+exiv2 -M"add Exif.Photo.ExposureTime Rational 1/19" modify ./foobar*.???
+
+The 'del' line is simply to remove any existing data since some exif-data can be added multiple times.
+In the end of the generated lines this is executed for ./foobar*.??? which simply put will try and write exif to ANY file having a three letter extension and where the beginning of the filename corresponds. I did this since my imagefiles follow this order: foobar_01.tif (original) and foobar_01-edited.jpg And I want this exif to apply with both. However there are problems with this, for example when I have saved gimp-files (or similar) in the folder, for example foobar_01.xcf however the script-files will simply fail on avery line when trying to appli exif to those and display error-messages, no more bad than that. One sollution is simply to write these filesd as gimp_foobar_01.xcf instead.
+
+
+-------------------------------------------------------

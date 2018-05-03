@@ -4,7 +4,6 @@
 #
 # Fixa / Adda:
 # 
-# Val att dissa tidsinställning i menyn? (endast datum)
 # Posibility to type time (hour:minute) without colons...
 #
 ################################################################
@@ -421,26 +420,28 @@ do
 	 echo "------------------------[ $FILENAME ]---------------------"
     	 echo "Aperture, ex 5.6 (type X to skip)"
     	 read OUT
+
 	 if [ "$OUT" = "X" ]
 	   then echo "skipping..."
 	   else sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	        echo "exiv2 -M\"del Exif.Photo.FNumber\" modify 		     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
     	   case "$OUT" in
-     	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|48|64|128|135)
+     	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|128|135|180|256|360|512)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
-     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|7.1)
+     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|7.1)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\.//g'`
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
-       	  0,95|1,1|1,2|1,4|1,5|1,6|1,7|1,8|2,2|2,5|2,6|2,8|3,2|3,5|4,5|5,6|7,1)
+       	  0,95|1,1|1,2|1,4|1,5|1,6|1,7|1,8|1,9|2,2|2,5|2,6|2,8|3,2|3,5|4,5|5,6|7,1)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\,//g'`
        	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
 	      *)echo "As that number was not in the existing list (for script to adjust)
 you will have to type it again, but like this:
-f/3.2 is written 32/10 but f/20 (without decimal) is written 20/1
-Whatever you write will be sent to script-file, without any correction by script.
+f/3.2 is written: 32/10 but f/20 (without decimal) is written 20/1
+Whatever you write will be accepted and sent to script-file, without any corrections.
+
 (OR type X to skip!)"
 	      read OUT
 	      if [ "$OUT" != "X" ]
@@ -467,11 +468,30 @@ for X in $(cat $HOME/tmp/add_exif/.list);
 do
   FULLNAME=$(basename "$X")
   FILENAME="${FULLNAME%.*}"
-#DEKLARERAD  DIR=$(dirname $X | sed s/\'//g)
-	 echo ""
-	 echo "------------------------[ $FILENAME ]---------------------"
-         echo "Speed, ex 4/1 (4sek) or 1/125 (type X to skip)"
-    	 read OUT
+#DEKLARERAD  DIR=$(dirname $X | se\'//g)
+
+
+
+
+if [ -e "$HOME"/tmp/add_exif/.speed ]
+	then SP=`cat $HOME/tmp/add_exif/.speed|awk '{print $1}'`
+	else SP="1/"
+fi
+
+OUT=$(dialog --title "Shutterspeed" --inputbox "Example:
+- 1/125 exposure is simply written 1/125
+- 10 second exposure is written 10/1
+- Type X do skip this file.
+
+$FILENAME
+" 0 0 "$SP" --output-fd 1) 
+
+echo "$OUT" > "$HOME"/tmp/add_exif/.speed
+
+#	 echo ""
+#	 echo "------------------------[ $FILENAME ]---------------------"
+#        echo "Speed, ex 4/1 (4sek) or 1/125 (type X to skip)"
+#    	 read OUT
 	 if [ "$OUT" = "X" ]
 	   then echo "skipping..."
 	   else sed --in-place '/Exif.Photo.ExposureTime/d' "$DIR"/script.$FILENAME.out
@@ -1798,7 +1818,14 @@ for X in $(cat $HOME/tmp/add_exif/.list);
     FILENAME="${FULLNAME%.*}"
 #DEKLARERAD    DIR=$(dirname $X | sed s/\'//g)
 done
-FIN=$(dialog --title "Finally running generated exif-scripts..." --menu "Options" 0 0 0 "1" "Execute ALL generated script-files in dir" "0" "Menu-list for each script" --output-fd 1)
+FIN=$(dialog --title "Finally running generated exif-scripts..." --menu "Running the generated files
+
+If you prefer to run these later, you can simply
+restart this script and unchecking the dialogboxes
+in mainmenu, or simply executing them manually:
+
+sh script.FOOBAR.out
+" 0 0 0 "1" "Execute ALL generated script-files in dir" "0" "Menu-list for each script" --output-fd 1)
 
 case $FIN in
 0) for pkg in $(ls $DIR/script.*)
