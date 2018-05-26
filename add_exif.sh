@@ -608,6 +608,9 @@ choise=$(/usr/bin/dialog --checklist "LENSMODEL:
 
 Chose one or more files for EACH lens
 
+!!! Make sure to MARK in the list, !!!
+!!!   Otherwise nothing is added   !!!
+
 $EXTRA
 
 This Menu will return!
@@ -616,8 +619,12 @@ This Menu will return!
 if [ -z $choise ]
  then break
 fi
-		
-choise=`echo $choise | tr " " "\n"`
+
+#Filtrera bort automatiskt skräp:
+#choise=`echo $choise | tr " " "\n"`
+#version 2: Ta även bort \ och " som kommer när det är specialtecken i filnamnet:
+choise=`echo $choise | tr " " "\n"| sed 's/\"//g; s/\\//g'`
+
 echo "$choise" > $HOME/tmp/add_exif/.lenslist
 
 lenslist=""
@@ -727,7 +734,7 @@ fi
 			#echo $LENSUSED
                    else echo "YES!" #; LENSUSED=NOLENS
 
-		for LIST in `cat $HOME/tmp/add_exif/.lenslist`; do
+		for LIST in $(cat $HOME/tmp/add_exif/.lenslist); do
 		FULLNAME=$(basename "$LIST")
 		FILENAME="${FULLNAME%.*}"
 #DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
@@ -919,7 +926,7 @@ if [ -z "$OUT" ]
 		#echo "Check..."		
 		#read bah1
 		echo "before $choise"
-		choise=$(echo $choise | tr " " "\n")
+		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 		echo "$choise" > $HOME/tmp/add_exif/.gpslist
 		for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
 		FULLNAME=$(basename "$LIST")
@@ -1303,9 +1310,11 @@ else
  dialog --title "One or several?" --defaultno --yesno "Is this about more than one roll or sheet?" 7 45
 
  if [ $? = 1 ]
-  if [ `echo $FILENAME|awk 'print $1'` -le 99999 ]
-    then NUMBER=`echo $FILENAME|awk 'print $1'`
-  fi
+	  if [ `echo $FILENAME|awk 'print $1' 2>/dev/null` -le 99999 ]
+	    then NUMBER=`echo $FILENAME|awk 'print $1'`
+	    else NUMBER="$FILENAME"
+	  fi
+
   then echo ""
      echo "-------------------[ ONE ROLL $NUMBER ]-----------------"
      echo ""
@@ -1387,6 +1396,9 @@ Chose one or more files FOR EACH comment
 C = Comment present.
 ~ = Comment NOT present.
 
+!!! Make sure to MARK in the list, !!!
+!!!   otherwise nothing is added   !!!
+
 !!! Any existing comments will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
 
 dialog --title "List of files" --inputbox "Write your Comment with up to 90 chars.
@@ -1400,7 +1412,8 @@ OUT=`cat $HOME/tmp/add_exif/.comment | sed -e 's/^[ \t]*//'`
 if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOCOMMENT
   else echo "YES!";
-		choise=$(echo $choise | tr " " "\n")
+  		#Filtrera bort " och \ när specialtecken finns i filnamnet:
+		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 		echo "$choise" > $HOME/tmp/add_exif/.commentlist
 		for LIST in `cat $HOME/tmp/add_exif/.commentlist`; do
 		FULLNAME=$(basename "$LIST")
@@ -1709,7 +1722,7 @@ done
 choise=$(/usr/bin/dialog --checklist "Chose in which scriptfiles you wish to remove some data." 0 0 0 $REMOVE  --output-fd 1)
 
 echo "running magic.."
-echo $choise | tr " " "\n" > "$HOME"/tmp/add_exif/.remove.list
+echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g' > "$HOME"/tmp/add_exif/.remove.list
 
 dialog --title "listing scriptfiles:" --yesno "Does this look ok?
 
