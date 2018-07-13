@@ -429,7 +429,7 @@ do
      	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|128|135|180|256|360|512)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
-     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|7.1)
+     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|6.7)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\.//g'`
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
@@ -563,13 +563,13 @@ LM1=""
 LM2=""
 LM3=""
 
-if [`cat $HOME/tmp/add_exif/.list|wc -l` -gt 1 ]
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
 	then dialog --title "Lens and focal length" --yesno "All files selected? (or none)" 0 0
 		case $? in
 			0) MARKING=on ;;
 			1) MARKING=off;;
 		esac
-	else MARKING=0
+	else MARKING=1
 fi
 
 #list files
@@ -604,6 +604,10 @@ if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
        EXTRA="$AMOUNT of these chosen files allready has LENSMODEL data."
 fi
 
+##########################
+#exit 0
+##########################
+
 choise=$(/usr/bin/dialog --checklist "LENSMODEL:
 
 Chose one or more files for EACH lens
@@ -623,7 +627,7 @@ fi
 #Filtrera bort automatiskt skräp:
 #choise=`echo $choise | tr " " "\n"`
 #version 2: Ta även bort \ och " som kommer när det är specialtecken i filnamnet:
-choise=`echo $choise | tr " " "\n"| sed 's/\"//g; s/\\//g'`
+choise=$(echo $choise | tr " " "\n"| sed 's/\"//g; s/\\//g')
 
 echo "$choise" > $HOME/tmp/add_exif/.lenslist
 
@@ -954,8 +958,8 @@ if [ -z "$OUT" ]
   esac
 fi
 
-
-
+#TODO
+#if bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
 dialog --title "Coordinates" --defaultno --yesno "Add more coordinates?" 0 0
 if [ $? = 1 ]
  then break
