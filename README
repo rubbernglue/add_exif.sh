@@ -85,6 +85,9 @@ The Questionmark is a devider to the actual lens-name, just as the exclamation-m
 
 -------------------------------------------------------
 
+ir disable a extension, so far I disable them.
+
+Also I have found that exiv2 might corrupt raw-files when manipulating exif-data (!!) So I disable .NEF personally.
 
 -------------------------------------------------------
 

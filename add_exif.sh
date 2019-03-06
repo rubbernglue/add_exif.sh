@@ -426,7 +426,7 @@ do
 	   else sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	        echo "exiv2 -M\"del Exif.Photo.FNumber\" modify 		     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
     	   case "$OUT" in
-     	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|128|135|180|256|360|512)
+     	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|125|128|135|180|256|360|512)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
      	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|6.7)
@@ -1105,6 +1105,9 @@ else
 fi
 }
 
+
+
+
 SOFTWARE () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -1115,54 +1118,76 @@ else
  clear
 #for X in $(cat $HOME/tmp/add_exif/.list);
 #do
+GIMPVERSION=`gimp --version|awk '{print $6}' 2>/dev/null`
+
 	 echo ""
 	 echo "------------------[ Scanner and software ]------------"
-         echo "Software/scanner [Gimp 2.8 and Nikon Coolscan V ED]"
-	 echo "(1) Gimp 2.8 and Nikon Coolscan V ED"
-	 echo "(2) Gimp 2.8 and Epson V500 flatbed"
-	 echo "(3) Gimp 2.8 and Epson (other)"
-	 echo "(4) Gimp 2.8 and Nikon Coolscan 8000 ED"
+         echo "Software/scanner [Gimp $GIMPVERSION and Nikon Coolscan V ED]"
+	 echo "(1) Gimp $GIMPVERSION and Nikon Coolscan V ED"
+	 echo "(2) Gimp $GIMPVERSION and Epson V500 flatbed"
+	 echo "(3) Gimp $GIMPVERSION and Epson (other)"
+	 echo "(4) Gimp $GIMPVERSION and Nikon Coolscan 8000 ED"
 	 echo "(5) Vuescan no scanner"
-	 echo "(6) TWAIN no scanner"
-	 echo "(7) Gimp 2.8 and Canon CanoScan 9000F"
-	 echo "(8) Gimp 2.8 and Epson Perfection V700"
-	 echo "(9) Other [write what you used]"
-	 echo "(10) None"
+	 echo "(6) DSLR"
+	 echo "(7) DSLR, re-use: `cat $HOME/.add_exif.config/dslr 2>/dev/null||echo '(no older settings found)'`"
+	 echo "(8) Gimp $GIMPVERSION and Canon CanoScan 9000F"
+	 echo "(9) Gimp $GIMPVERSION and Epson Perfection V700"
+	 echo "(10) Other [write what you used]"
+	 echo "(11) None"
 	 read OUT
 	 if [ -z "$OUT" ]
 	   then echo "Skipping..."
            else case "$OUT" in
-		   1)SOFTWARE="Gimp 2.8"
+		   1)SOFTWARE="Gimp $GIMPVERSION"
 		     SCANNER="Nikon Coolscan V ED";;
-		   2)SOFTWARE="Gimp 2.8"
+		   2)SOFTWARE="Gimp $GIMPVERSION"
 		     SCANNER="Epson Perfection V500 Photo";;
 		   3)echo "Which model?"
 	             echo "(1) V700"
 	             echo "(2) V750"
 		     echo "(3) 1240u"
-	             echo "(4) Other"
+		     echo "(4) 1240u"
+		     echo "(5) 1240u"
+	             echo "(6) Other"
 	             read SCANNER
 	             case "$SCANNER" in
 	               1)SCANNER="Epson Perfection V700 Photo";;
 	               2)SCANNER="Epson Perfection V750 Pro";;
-		       3)SCANNER="Epson Perfection 1240u";;
-	               4)echo "Write Epson model, Tag will say: 'Epson $SCANMOD'"
+		       3)SCANNER="Epson Perfection V800 Photo";;
+		       4)SCANNER="Epson Perfection V850 Pro";;
+		       5)SCANNER="Epson Perfection 1240u";;
+	               6)echo "Write Epson model, Tag will say: 'Epson $SCANMOD'"
 		         read SCANMOD
 		         SCANNER="Epson $SCANMOD"
 			 SOFTWARE="Vuescan";;
 		     esac
-		     SOFTWARE="Gimp 2.8";;
-                   4)SOFTWARE="Gimp 2.8"
+		     SOFTWARE="Gimp $GIMPVERSION";;
+                   4)SOFTWARE="Gimp $GIMPVERSION"
 		     SCANNER="Nikon Coolscan 8000 ED";;
 		   5)SOFTWARE="Vuescan"
 		     SCANNER="n";;
-		   6)SOFTWARE="Twain"
-		     SCANNER="n";;
-		   7)SOFTWARE="Gimp 2.8"
+		   6)echo "DSLR manufacturer: (Model in next step)"
+                     read MANUFACT
+		     echo "Write DSLR model:"
+		     read SCANMOD
+		     SCANNER="$MANUFACT $SCANMOD"
+		     echo 'With which software?'
+		     read SOFTWARE
+		     #if [ -z "$SOFTWARE" ]
+		     #fi
+		     echo "$MANUFACT:$SCANMOD:$SOFTWARE" > $HOME/.add_exif.config/dslr ;;
+                   7)if [ -e $HOME/.add_exif.config/dslr ];
+		     then
+                     	SOFTWARE=`cat $HOME/.add_exif.config/dslr|cut -d\: -f 3`
+		     	SCANNER=`cat $HOME/.add_exif.config/dslr|cut -d\: -f 1,2|sed 's/\:/ /g'`
+                     else echo "No pre-set camerasettings found, quitting this setting"
+		          read
+		     fi;;
+		   8)SOFTWARE="Gimp $GIMPVERSION"
 		     SCANNER="Canon CanoScan 9000F";;
-		   8)SOFTWARE="Gimp 2.8"
+		   9)SOFTWARE="Gimp $GIMPVERSION"
 		     SCANNER="Epson Perfection V700";;
-		   9)echo "Scanner manufacturer:"
+		   10)echo "Scanner manufacturer:"
                      read MANUFACT
 		     echo "Write model:"
 		     read SCANMOD
@@ -1172,7 +1197,7 @@ else
 		     if [ -z "$SOFTWARE" ]
 		       then SOFTWARE="n"
 		     fi;;
-		   10)SOFTWARE="n"
+		   11)SOFTWARE="n"
 		     SCANNER="n";;
 		 esac
 	 fi
@@ -1323,6 +1348,7 @@ else
      echo "-------------------[ ONE ROLL $NUMBER ]-----------------"
      echo ""
      echo "Type roll-id number:"
+
      read ROLL
 
   if [ -z "$ROLL" ];
@@ -1446,6 +1472,44 @@ done
 fi
 }
 
+DISABLE_FOR () {
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
+then MD5SUM="/usr/bin/md5sum"
+	for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+		if [ -x $MD5SUM ]
+			then BEFORE=`$MD5SUM "$X"`
+			     sed --in-place '/case/d' "$X"
+			     AFTER=`"$MD5SUM" "$X"`
+			     if [ "$BEFORE" = "$AFTER" ]
+				then dialog --title "Tag not removed" --msgbox "Tag not found in file." 10 40
+			     fi
+			     sed --in-place '/case/d' "$X"
+			fi
+	done
+else
+	if [ ! -e $HOME/.add_exif.config/disable_for ] ; then echo '*.NEF *.dng *.zip' > $HOME/.add_exif.config/disable_for ; fi
+	dialog --title 'Which files to ignore?' --inputbox "Which file extensions should be ignored by these scripts?
+	
+NEF files (Nikon raw files) among other raw files have shown prone to corruption when manipulated by exiv2.
+Test this out yourself before executing exiv2 on your raw files.
+
+Should be writtes case-sensitive and separated only by spaces.
+
+ie. *.NEF *.dng
+" 0 0 "`cat $HOME/.add_exif.config/disable_for`" 2>$HOME/.add_exif.config/disable_for
+	DISABLE=`cat $HOME/.add_exif.config/disable_for|sed 's/ /\|/g'`
+	for X in $(cat $HOME/tmp/add_exif/.list);
+	  do
+	    FULLNAME=$(basename "$X")
+	    FILENAME="${FULLNAME%.*}"
+	      #DEKLARERAD  DIR=$(dirname $X | sed s/\'//g)
+	        sed --in-place '/case/d' "$DIR"/script.$FILENAME.out
+		sed -i "1icase \$1 in $DISABLE)exit 0 ;; esac" "$DIR"/script.$FILENAME.out
+	done
+fi
+# sed -i "1icase $1 in *.NEF|*.pp3|*.out|*.bz2|*.xcf)exit 0 ;; esac" file
+}
+
 FILM () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then MD5SUM="/usr/bin/md5sum"
@@ -1492,15 +1556,16 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  case "$OUT" in
  'Kodak')dialog --title "Kodak"  --menu "Options:" 20 40 60 \
 	"Kodak Ektar" "" \
-        "Kodak Tmax" "" \
-        "Kodak TriX" "" \
-        "Kodak Portra" "" \
-	"Kodak BW400CN" "" \
-	"Kodak Portra 160" "" \
+        "Kodak Tmax 100" "" \
+        "Kodak Tmax 400" "" \
+        "Kodak TriX 320" "" \
+        "Kodak TriX 400" "" \
+        "Kodak Portra 160" "" \
 	"Kodak Portra 160NC" "" \
 	"Kodak Portra 160VC" "" \
-	"Kodak Portra 400" "" \
-	"Kodak Portra 800" "" \
+        "Kodak Portra 400" "" \
+        "Kodak Portra 800" "" \
+	"Kodak BW400CN" "" \
 	"Kodak E100" "" \
 	"Kodak E100VC" "" \
 	"Kodak E100VS" "" \
@@ -1520,13 +1585,15 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
 	"Kodak Plus-X Pan" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'Ilford')dialog --title "Ilford"  --menu "Options:" 20 40 60 \
-	"Ilford PanF" "" \
-	"Ilford Pan" "" \
-        "Ilford FP4" "" \
-        "Ilford HP5+" "" \
-        "Ilford Delta" "" \
+	"Ilford PanF 50" "" \
+	"Ilford Pan 400" "" \
+        "Ilford FP4 125" "" \
+        "Ilford HP5+ 400" "" \
+        "Ilford Delta 100" "" \
+        "Ilford Delta 400" "" \
+        "Ilford Delta 3200" "" \
         "Ilford XP2" "" \
-        "Ilford SFX" "" \
+        "Ilford SFX 200" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'Kentmere')dialog --title "Kentmere"  --menu "Options:" 20 40 60 \
 	"Kentmere 100" "" \
@@ -1534,39 +1601,51 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
 2> $HOME/tmp/add_exif/.film ;;
  'Fujifilm')dialog --title "Fuji"  --menu "Options:" 20 40 60 \
 	"Fujifilm 160 NS" "" \
-	"Fujifilm Superia" "" \
-        "Fujifilm Superia X-Tra" "" \
+	"Fujifilm Superia 200" "" \
+	"Fujifilm Superia 400" "" \
+	"Fujifilm Superia 800" "" \
+	"Fujifilm Superia 1600" "" \
+        "Fujifilm Superia X-Tra 400" "" \
+        "Fujifilm Superia X-Tra 800" "" \
         "Fujifilm Pro 400H" "" \
         "Fujifilm Astia" "" \
 	"Fujifilm C200" "" \
         "Fujifilm Reala" "" \
-        "Fujifilm Neopan" "" \
         "Fujifilm Neopan 100 Acros" "" \
-        "Fujichrome Velvia" "" \
-        "Fujichrome 64T" "" \
+        "Fujifilm Neopan SS" "" \
+        "Fujifilm Neopan 400" "" \
+        "Fujifilm Neopan 1600" "" \
+        "Fujichrome Velvia 50 (RVP50)" "" \
+        "Fujichrome Velvia 100 (RVP100)" "" \
+        "Fujichrome Velvia 100F (RVP100F)" "" \
+        "Fujichrome T64 (RTP-II)" "" \
         "Fujichrome Provia" "" \
 	"Fujichrome Provia 400X" "" \
-	"Fujichrome Provia 100" "" \
-	"Fujichrome Provia 100F" "" \
-	"Fujichrome Provia 50" "" \
+	"Fujichrome Provia 100F (RDPIII)" "" \
+	"Fujichrome Provia 400F (RHPIII)" "" \
+	"Fujichrome Provia 1600 (RSP)" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'FOMA')dialog --title "Fomapan"  --menu "Options:" 20 40 60 \
-        "FOMA Fomapan Classic" "" \
-        "FOMA Fomapan Creative" "" \
-        "FOMA Fomapan Action" "" \
-        "FOMA Fomapan R" "" \
+        "FOMA Fomapan Classic 100" "" \
+        "FOMA Fomapan Creative 200" "" \
+        "FOMA Fomapan Action 400" "" \
+        "FOMA Fomapan Retropan 320" "" \
+        "FOMA Fomapan R 100" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'AgfaPhoto')dialog --title "AgfaPhoto"  --menu "Options:" 20 40 60 \
-	"AgfaPhoto Vista Plus" "" \
-        "AgfaPhoto CT Precisa" "" \
-        "AgfaPhoto APX (old)" "" \
-        "AgfaPhoto APX (new)" "" \
+	"AgfaPhoto Vista Plus 200" "" \
+	"AgfaPhoto Vista Plus 400" "" \
+        "AgfaPhoto CT Precisa 100" "" \
+        "AgfaPhoto APX 100 (old emulsion)" "" \
+        "AgfaPhoto APX 400 (old emulsion)" "" \
+        "AgfaPhoto APX 100 (new emulsion)" "" \
+        "AgfaPhoto APX 400 (new emulsion)" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'Agfa-Gevaert')dialog --title "Agfa"  --menu "Options:" 20 40 60 \
         "Agfa-Gevaert Scala 200x" "" \
 	"Agfa-Gevaert Copex Rapid" "" \
-	"Agfa-Gevaert Isopan" "" \
-	"Agfa-Gevaert Agfapan" "" \
+	"Agfa-Gevaert Isopan 125" "" \
+	"Agfa-Gevaert Agfapan 100" "" \
 	"Agfa-Gevaert AgfaPan Vario XL" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'Bergger')dialog --title "Bergger" --menu "Options:" 20 40 60 \
@@ -1607,7 +1686,8 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  'Rollei')dialog --title "Rollei"  --menu "Options:" 20 40 60 \
         "Rollei Infrared" "" \
         "Rollei Superpan" "" \
-        "Rollei RPX" "" \
+        "Rollei RPX 100" "" \
+        "Rollei RPX 400" "" \
         "Rollei Retro 80s" "" \
         "Rollei Retro 400s" "" \
         "Rollei ATO 2.1" "" \
@@ -1750,6 +1830,7 @@ if [ $? = 1 ]
         SOFTWARE " " off \
 	COMMENT " " off \
 	GPSDATA " " off \
+#	DISABLE_FOR " " off \
 2>> "$HOME"/tmp/add_exif/.dialogout
 
 
