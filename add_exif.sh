@@ -818,21 +818,118 @@ then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
        sed --in-place '/GPS\ Data:/d' "$X"
        sed --in-place '/GPS\ End./d' "$X"
      done
-else
+else GPSFORMAT=$(dialog --title "Which GPS Format?" --menu "Types:" 0 0 0 "1" "60 10 11.5N 024 57 06.4E" "2" "N 64 32 5.3, E 12 24 3.6" --output-fd 1)
+   case "$GPSFORMAT" in
+	1)GPSDATA1;;
+	2)GPSDATA2;;
+   esac
+fi
+
+}
+
+GPSDATA1 () {
+
+#bort med ev. gammnal fil.
+rm -rf /$HOME/tmp/add_exif/.gps
+
+while true; do
+
+pkglist=""
+for pkg in $(cat $HOME/tmp/add_exif/.list); do
+	FULLNAME=$(basename "$pkg")
+	FILENAME="${FULLNAME%.*}"
+	if [ `grep 'GPSInfo' "$DIR"/script.$FILENAME.out|wc -l` -ge 1 ]
+		then OPT='GPS'
+		else OPT='~'
+	fi
+	pkglist="$pkglist $pkg $OPT off "
+done
+
+choise=$(/usr/bin/dialog --checklist "GPSDATA:
+
+Chose one or more files FOR EACH coordinates
+
+This Menu will return!
+
+!!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
+
+dialog --title "List of files" --inputbox "Write your GPS tag using the following format:
+$choise
+
+60 10 11.5N 024 57 06.4E
+Must be, degrees, minutes AND seconds!" 0 0 " " 2>$HOME/tmp/add_exif/.gps
+
+
+# sed removed empty spaces in the beginning of the gps-string:
+OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
+
+if [ -z "$OUT" ]
+  then echo "NO..." ; OUT=NOGPS
+  else echo "YES!";
+  case `echo "$OUT"|awk '{print $3}'|rev` in
+	N*|S*|W*|E*)
+		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
+		 G4=`echo "$OUT"|awk '{print $4}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G6=`echo "$OUT"|awk '{print $6}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
+		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
+		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
+
+		echo "before $choise"
+		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
+		echo "$choise" > $HOME/tmp/add_exif/.gpslist
+
+		for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
+
+		FULLNAME=$(basename "$LIST")
+		FILENAME="${FULLNAME%.*}"
+		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
+		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
+		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
+                   echo " 
+# GPS Data:"  >> "$DIR"/script.$FILENAME.out
+		   sed --in-place '/Exif.GPSInfo/d' "$X"
+		   sed --in-place '/GPS\ Data:/d' "$X"
+		   sed --in-place '/GPS\ End./d' "$X"
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GWE\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $G1 $G2 $G3\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		   echo "# GPS End.
+   "  >> "$DIR"/script.$FILENAME.out
+   		done ;;
+	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
+esac
+fi
+#TODO
+#if bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
+dialog --title "Coordinates" --defaultno --yesno "Add more coordinates?" 0 0
+if [ $? = 1 ]
+ then break
+ else echo "om igen..." 
+fi
+
+#End of menu-loop:
+done
+
+if [ $? = 2 ]
+  then exit 0
+fi 
+
+}
+
+
+
+
+GPSDATA2 () {
 
 rm -rf /$HOME/tmp/add_exif/.gps
 
-###pkglist=""
-###for pkg in $(cat $HOME/tmp/add_exif/.list)
-###        do pkglist="$pkglist $pkg ~ off "
-###done
-
-#echo "1: $FILENAME" >> /tmp/add_exif/BAAH		
-
-#echo $pkglist
-#while choise=`/usr/bin/dialog --stdout --title "Chose one file at a time for GPS data" --menu "Items:" 0 0 0 $pkglist`; do
-
-#Loop to return to menu after being done with the first coordinate.
 while true; do
 
 
@@ -857,17 +954,6 @@ Chose one or more files FOR EACH coordinates
 This Menu will return!
 
 !!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
-
-#case $? in
-# 0);;
-# 1)break ;;
-#esac
-
-#echo $choise > /$HOME/tmp/add_exif/.gpslist
-
-#FULLNAME=$(basename "$choise")
-#FILENAME="${FULLNAME%.*}"
-#DIR=$(dirname "$choise" | sed s/\'//g)
 
 dialog --title "List of files" --inputbox "Write your GPS tag using the following format:
 $choise
@@ -927,8 +1013,6 @@ if [ -z "$OUT" ]
                           else BY6=10
                                GPS8=`echo $GPS8 | sed 's/\.//g'`
                         fi
-		#echo "Check..."		
-		#read bah1
 		echo "before $choise"
 		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 		echo "$choise" > $HOME/tmp/add_exif/.gpslist
@@ -972,9 +1056,6 @@ done
 if [ $? = 2 ]
   then exit 0
 fi 
-#rm /$HOME/tmp/add_exif/.gps
-#done
-fi
 }
 
 ISO () {
@@ -1540,8 +1621,7 @@ else
 	"AgfaPhoto" "" \
 	"ORWO" "" \
 	"Efke" "" \
-	"Arista EDU Ultra" "" \
-	"Shanghai GP3" "" \
+	"CHM" "" \
 	"Holga" "" \
 	"DM Paradies 200" "" \
 	"Noname" "" \
@@ -1700,6 +1780,10 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
         "Rollei CN 200" "" \
 	"Rollei Vario Chrome" "" \
 2> $HOME/tmp/add_exif/.film ;;
+ 'CHM')dialog --title "CHM" --menu "Options:" 20 40 60 \
+ 	"CHM 100 Universal" "" \
+ 	"CHM 400 Universal" "" \
+2> $HOME/tmp/add_exif/.film ;;
  'Efke')dialog --title "Efke"  --menu "Options:" 20 40 60 \
 	"Efke IR 820" "" \
         "Efke R 100" "" \
@@ -1733,6 +1817,8 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  'Others')dialog --title "Which strange (old?) film have you found?"  --menu "Options:" 20 40 60 \
 	"Konica Centuria" "" \
 	"ExtraFilm.com" "" \
+	"Arista EDU Ultra" "" \
+	"Shanghai GP3" "" \
 	"Kosmo Foto Mono" "" \
 	"Lucky SHD" "" \
 	"JCH Street Pan" "" \
