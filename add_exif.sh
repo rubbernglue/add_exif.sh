@@ -74,12 +74,12 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 else
 
 
-
 for D in $(cat $HOME/tmp/add_exif/.list)
 do
 FULLNAME=$(basename "$D")
 FILENAME="${FULLNAME%.*}"
 #DEKLARERAD DIR=$(dirname $D | sed s/\'//g)
+
 
 if [ -e "$HOME"/tmp/add_exif/.datetime ]
    then #echo "Date, same as last? [`cat $HOME/tmp/add_exif/.exiftimehistory`]"
@@ -98,11 +98,16 @@ if [ -e $HOME/tmp/add_exif/.datetime ]
         TIME=`cat $HOME/tmp/add_exif/.datetime | awk '{print $2}'`
 fi
 	sed --in-place '/Exif.Photo.Date/d' "$DIR"/script.$FILENAME.out
-        echo "exiv2 -M\"del Exif.Photo.DateTimeOriginal\"             $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-        echo "exiv2 -M\"set Exif.Photo.DateTimeOriginal $DATE $TIME\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+        APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+        echo "exiv2 -M\"del Exif.Photo.DateTimeOriginal\"             $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+        echo "exiv2 -M\"set Exif.Photo.DateTimeOriginal $DATE $TIME\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #       echo 'DateTime' >> $HOME/tmp/add_exif/added
 #       echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 done
 rm -r $HOME/tmp/add_exif/.datetime
 fi
@@ -134,8 +139,8 @@ FILENAME="${FULLNAME%.*}"
 
          echo "Time, ex 13:24"
          read OUT2
-         echo "exiv2 -M\"del Exif.Photo.DateTimeOriginal\"             $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-         echo "exiv2 -M\"set Exif.Photo.DateTimeOriginal $OUT1 $OUT2\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+         echo "exiv2 -M\"del Exif.Photo.DateTimeOriginal\"             $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+         echo "exiv2 -M\"set Exif.Photo.DateTimeOriginal $OUT1 $OUT2\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	 echo 'DateTime' >> $HOME/tmp/add_exif/added
 #	 echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 done
@@ -292,10 +297,16 @@ Type ex. Adox Adonal" 12 50 2> $HOME/tmp/add_exif/.dev;;
 #DEKLARERAD	   DIR=$(dirname $P | sed s/\'//g)
 	   if [ "$DEV" != "Professional Processing" ]
 	     then sed --in-place '/eveloped using/d' "$DIR"/script.$FILENAME.out
-	          echo "exiv2 -M\"add Exif.Photo.UserComment Home developed using $DEV\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-	     else echo "exiv2 -M\"add Exif.Photo.UserComment Developed using $DEV\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	          echo "exiv2 -M\"add Exif.Photo.UserComment Home developed using $DEV\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	     else echo "exiv2 -M\"add Exif.Photo.UserComment Developed using $DEV\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	   fi
 	   echo 'developed' >> $HOME/tmp/add_exif/added
+
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 #	   echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 	 done
 fi
@@ -349,8 +360,13 @@ do
 	M)MODE=1;;
 	esac
 	sed --in-place '/Photo.ExposureProgram/d' "$DIR"/script.$FILENAME.out
-	echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-        echo "exiv2 -M\"set Exif.Photo.ExposureProgram "$MODE"\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+        APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+        echo "exiv2 -M\"set Exif.Photo.ExposureProgram "$MODE"\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
   fi
  done; break
 done
@@ -393,8 +409,9 @@ do
          esac
 	 if [ "$MODE" != unknown ]
 	   then sed --in-place '/Exif.Photo.ExposureProgram/d' "$DIR"/script.$FILENAME.out
-	        echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                echo "exiv2 -M\"set Exif.Photo.ExposureProgram $MODE\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	        echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                echo "exiv2 -M\"set Exif.Photo.ExposureProgram $MODE\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		echo 'ExposureProgram' >> $HOME/tmp/add_exif/added
 #		echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 	 fi
@@ -421,22 +438,24 @@ do
     	 echo "Aperture, ex 5.6 (type X to skip)"
     	 read OUT
 
+         APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+
 	 if [ "$OUT" = "X" ]
 	   then echo "skipping..."
 	   else sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
-	        echo "exiv2 -M\"del Exif.Photo.FNumber\" modify 		     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	        echo "exiv2 -M\"del Exif.Photo.FNumber\" modify 		     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
     	   case "$OUT" in
      	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|125|128|135|180|256|360|512)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
-     	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
+     	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
      	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|6.7)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\.//g'`
-     	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
+     	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
        	  0,95|1,1|1,2|1,4|1,5|1,6|1,7|1,8|1,9|2,2|2,5|2,6|2,8|3,2|3,5|4,5|5,6|7,1)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\,//g'`
-       	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out ;;
+       	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
 	      *)echo "As that number was not in the existing list (for script to adjust)
 you will have to type it again, but like this:
 f/3.2 is written: 32/10 but f/20 (without decimal) is written 20/1
@@ -446,10 +465,14 @@ Whatever you write will be accepted and sent to script-file, without any correct
 	      read OUT
 	      if [ "$OUT" != "X" ]
 	      then sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
-	      	   echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	      	   echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	      fi ;;
     	 esac
 	 fi
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 	 echo 'FNumber' >> $HOME/tmp/add_exif/added
 #	 echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 done
@@ -495,10 +518,15 @@ echo "$OUT" > "$HOME"/tmp/add_exif/.speed
 	 if [ "$OUT" = "X" ]
 	   then echo "skipping..."
 	   else sed --in-place '/Exif.Photo.ExposureTime/d' "$DIR"/script.$FILENAME.out
-	        echo "exiv2 -M\"del Exif.Photo.ExposureTime Rational\" modify      $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-    	        echo "exiv2 -M\"add Exif.Photo.ExposureTime Rational $OUT\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	   	APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	        echo "exiv2 -M\"del Exif.Photo.ExposureTime Rational\" modify      $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+    	        echo "exiv2 -M\"add Exif.Photo.ExposureTime Rational $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	        echo 'ExposureTime' >> $HOME/tmp/add_exif/added
 #                echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
 	 fi
 done
 fi
@@ -537,10 +565,15 @@ do
 	  case "$OUT" in
 		X|x);;
 		*) sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out
-		   echo "exiv2 -M\"del Exif.Photo.FocalLength Rational\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-           	   echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $OUT/1\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   echo "exiv2 -M\"del Exif.Photo.FocalLength Rational\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+           	   echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $OUT/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #	   	   echo 'FocalLength' >> $HOME/tmp/add_exif/added
 #           	   echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE";;
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi;;
 	  esac
 done
 fi
@@ -748,7 +781,12 @@ fi
 		#Add new data:
 		   LENSUSED1=`echo $LENSUSED|sed 's/_/ /g'`
                    sed --in-place '/Exif.Photo.LensModel/d' "$DIR"/script.$FILENAME.out
-		   echo "exiv2 -M\"set Exif.Photo.LensModel $LENSUSED1\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   echo "exiv2 -M\"set Exif.Photo.LensModel $LENSUSED1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
 
 		if [ -z "$LM3" ]
 			then F2=$(echo "$LENSUSED" | sed 's/_/ /g') # | cut -d'!' -f2 | sed -e 's/mm//g' -e 's/MM//g')
@@ -763,10 +801,15 @@ fi
 
 		if [ -n "$F3" -a "$F3" -lt 10000 2>/dev/null ]
                    then sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out #2>/dev/null
-		   	echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $F3/1\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+                        APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   	echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $F3/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+			if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+			       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+			fi
 		   else	echo "FocalLength `echo $F3` NOT added to exif!
 - Probably there was no value in the Lenses configuration-file."
-		   	read bah
+		   	sleep 1
 		fi
 
 
@@ -867,7 +910,7 @@ if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOGPS
   else echo "YES!";
   case `echo "$OUT"|awk '{print $3}'|rev` in
-	N*|S*|W*|E*)
+	N*|S*)
 		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
 		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
 		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
@@ -888,27 +931,34 @@ if [ -z "$OUT" ]
 		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
 		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
 		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
+		   echo "$FILENAME ..."
                    echo " 
 # GPS Data:"  >> "$DIR"/script.$FILENAME.out
 		   sed --in-place '/Exif.GPSInfo/d' "$X"
 		   sed --in-place '/GPS\ Data:/d' "$X"
 		   sed --in-place '/GPS\ End./d' "$X"
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GWE\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $G1 $G2 $G3\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GWE\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $G1 $G2 $G3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		   echo "# GPS End.
    "  >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
    		done ;;
 	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
 esac
 fi
 #TODO
-#if bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
-dialog --title "Coordinates" --defaultno --yesno "Add more coordinates?" 0 0
+#- konvertera googles decimal-coordinater till "vanliga" finns info här:
+#  https://gis.stackexchange.com/questions/62103/how-do-you-convert-to-degrees-and-minutes-from-8-9-digit-lat-lon-dms-code
+#- If bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
+dialog --title "Coordinates" --defaultyes --yesno "Add more coordinates?" 0 0
 if [ $? = 1 ]
  then break
  else echo "om igen..." 
@@ -972,7 +1022,7 @@ if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOGPS
   else echo "YES!";
   case "$OUT" in
-	N*|S*|W*|E*)
+	N*|S*)
                         GPS1=`echo "$OUT" | awk '{print $1}'`
                         GPS2=`echo "$OUT" | awk '{print $2}'`
                         if [ "$GPS2" = `echo "$GPS2" | sed 's/\.//g'` ]
@@ -1028,15 +1078,19 @@ if [ -z "$OUT" ]
 		   sed --in-place '/Exif.GPSInfo/d' "$X"
 		   sed --in-place '/GPS\ Data:/d' "$X"
 		   sed --in-place '/GPS\ End./d' "$X"
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GPS1\" modify        $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GPS5\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $GPS2/$BY1 $GPS3/$BY2 $GPS4/$BY3\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $GPS6/$BY4 $GPS7/$BY5 $GPS8/$BY6\" modify     $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GPS1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GPS5\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $GPS2/$BY1 $GPS3/$BY2 $GPS4/$BY3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $GPS6/$BY4 $GPS7/$BY5 $GPS8/$BY6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		   echo "# GPS End.
    "  >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
 		done;;
 	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
   esac
@@ -1083,12 +1137,17 @@ else
           read PUSH1
           echo 'to: (ex: 200)'
           read PUSH2
+	  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
           if [ "$PUSH1" -gt "$PUSH2" ]
             then sed --in-place '/pulled/d' "$DIR"/script.$FILENAME.out
-	    	 echo "exiv2 -M\"add Exif.Photo.UserComment $PUSH1 pulled to $PUSH2\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	    	 echo "exiv2 -M\"add Exif.Photo.UserComment $PUSH1 pulled to $PUSH2\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
             else sed --in-place '/pushed/d' "$DIR"/script.$FILENAME.out
-	         echo "exiv2 -M\"add Exif.Photo.UserComment $PUSH1 pushed to $PUSH2\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	         echo "exiv2 -M\"add Exif.Photo.UserComment $PUSH1 pushed to $PUSH2\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
           fi
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
           echo 'Push' >> $HOME/tmp/add_exif/added
           OUT="$PUSH2"
           ;;
@@ -1102,8 +1161,9 @@ else
            FILENAME="${FULLNAME%.*}"
 #DEKLARERAD           DIR=$(dirname $X | sed s/\'//g)
 	   sed --in-place '/Exif.Photo.ISOSpeedRatings/d' "$DIR"/script.$FILENAME.out
-           echo "exiv2 -M\"del Exif.Photo.ISOSpeedRatings\"      $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-           echo "exiv2 -M\"set Exif.Photo.ISOSpeedRatings $OUT\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+           echo "exiv2 -M\"del Exif.Photo.ISOSpeedRatings\"      $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+           echo "exiv2 -M\"set Exif.Photo.ISOSpeedRatings $OUT\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
            echo 'ISOSpeedRatings' >> $HOME/tmp/add_exif/added
            echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
            done
@@ -1132,19 +1192,21 @@ else
           read OUT
           echo 'to: (ex: 200)'
           read PUSH2
+	  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
           if [ "$OUT" -gt "$PUSH2" ]
             then sed --in-place '/pulled/d' "$DIR"/script.$FILENAME.out
-	         echo "exiv2 -M\"add Exif.Photo.UserComment $OUT pulled to $PUSH2\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	         echo "exiv2 -M\"add Exif.Photo.UserComment $OUT pulled to $PUSH2\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
             else sed --in-place '/pushed/d' "$DIR"/script.$FILENAME.out
-	         echo "exiv2 -M\"add Exif.Photo.UserComment $OUT pushed to $PUSH2\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	         echo "exiv2 -M\"add Exif.Photo.UserComment $OUT pushed to $PUSH2\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
           fi
 	  echo "$OUT" > $HOME/tmp/add_exif/.exifisohistory
           OUT="$PUSH2"
           ;;
      esac
          sed --in-place '/Exif.Photo.ISOSpeedRatings/d' "$DIR"/script.$FILENAME.out
-	 echo "exiv2 -M\"del Exif.Photo.ISOSpeedRatings\"      $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-         echo "exiv2 -M\"set Exif.Photo.ISOSpeedRatings $OUT\" $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	 echo "exiv2 -M\"del Exif.Photo.ISOSpeedRatings\"      $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+         echo "exiv2 -M\"set Exif.Photo.ISOSpeedRatings $OUT\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
          echo 'ISOSpeedRatings' >> $HOME/tmp/add_exif/added
 #         echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
       done
@@ -1156,8 +1218,7 @@ fi
 PHOTOGRAPHER () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
-       sed --in-place '/Exif.Image.Artist/d' "$X"
-       sed --in-place '/Exif.Image.Copyright/d' "$X"
+       sed --in-place '/Exif.Image.Artist/d ; /Exif.Image.Copyright/d' "$X"
      done
 else
  if [ -e $HOME/.add_exif.config/mail ]
@@ -1174,13 +1235,17 @@ else
   FULLNAME=$(basename "$X")
   FILENAME="${FULLNAME%.*}"
 #DEKLARERAD  DIR=$(dirname $X | sed s/\'//g)
-  sed --in-place '/Exif.Image.Artist/d' "$DIR"/script.$FILENAME.out
-  echo "exiv2 -M\"del Exif.Image.Artist\" 		 $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-  echo "exiv2 -M\"set Exif.Image.Artist $MAIL\"           $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-  sed --in-place '/Exif.Exif.Image.Copyright/d' "$DIR"/script.$FILENAME.out
-  echo "exiv2 -M\"set Exif.Image.Copyright $MAIL\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+  sed --in-place '/Exif.Image.Artist/d ; /Exif.Image.Copyright/d' "$DIR"/script.$FILENAME.out
+  echo "exiv2 -M\"set Exif.Image.Artist $MAIL\"           $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+  echo "exiv2 -M\"del Exif.Image.Artist\" 		 $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+  echo "exiv2 -M\"set Exif.Image.Copyright $MAIL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
   echo 'Artist'    >> $HOME/tmp/add_exif/added
   echo 'Copyright' >> $HOME/tmp/add_exif/added
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 #  echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
  done
 fi
@@ -1293,17 +1358,22 @@ GIMPVERSION=`gimp --version|awk '{print $6}' 2>/dev/null`
   FILENAME="${FULLNAME%.*}"
 #DEKLARERAD  DIR=$(dirname $X | sed s/\'//g)
          sed --in-place '/Exif.Image.Software/d' "$DIR"/script.$FILENAME.out
-	 echo "exiv2 -M\"del Exif.Image.Software\" modify                                  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	 echo "exiv2 -M\"del Exif.Image.Software\" modify                                  $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
          if [ "$SOFTWARE" != "n" ];
 	   then sed --in-place '/Exif.Image.Software/d' "$DIR"/script.$FILENAME.out
-	        echo "exiv2 -M\"set Exif.Image.Software $SOFTWARE\" modify                 $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	        echo "exiv2 -M\"set Exif.Image.Software $SOFTWARE\" modify                 $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #                echo 'Image.Software' >> $HOME/tmp/add_exif/added
 	 fi
 	 if [ "$SCANNER" != "n" ];
 	   then sed --in-place '/Scanned/d' "$DIR"/script.$FILENAME.out
-	        echo "exiv2 -M\"add Exif.Photo.UserComment Scanned with: $SCANNER\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	        echo "exiv2 -M\"add Exif.Photo.UserComment Scanned with: $SCANNER\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #	        echo 'Scanned' >> $HOME/tmp/add_exif/added
 	 fi
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
  done
 # echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 fi
@@ -1379,17 +1449,22 @@ Model: Edixa XXXXX
   echo "$DIR/$FILENAME"
   echo sed --in-place '/Exif.Image.Model/d' "$DIR"/script.$FILENAME.out
   echo sed --in-place '/Exif.Image.Make/d' "$DIR"/script.$FILENAME.out
-  echo "exiv2 -M\"del Exif.Image.Model\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
-  echo "exiv2 -M\"del Exif.Image.Make\" modify  $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+  echo "exiv2 -M\"del Exif.Image.Model\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+  echo "exiv2 -M\"del Exif.Image.Make\" modify  $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
   if [ -z "$TYPE" ]
-    then : #echo "exiv2 -M\"add Exif.Image.Make $OUT\" modify               $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+    then : #echo "exiv2 -M\"add Exif.Image.Make $OUT\" modify               $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
     else sed --in-place '/Exif.Image.Model/d' "$DIR"/script.$FILENAME.out
-         echo "exiv2 -M\"add Exif.Image.Model $TYPE\" modify             $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+         echo "exiv2 -M\"add Exif.Image.Model $TYPE\" modify             $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #         echo 'Image.Model' >> $HOME/tmp/add_exif/added
 	 sed --in-place '/Exif.Image.Make/d' "$DIR"/script.$FILENAME.out
-         echo "exiv2 -M\"add Exif.Image.Make $OUT\" modify               $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+         echo "exiv2 -M\"add Exif.Image.Make $OUT\" modify               $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 #         echo 'Image.Make' >> $HOME/tmp/add_exif/added
   fi
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 #  echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
  done
 ####
@@ -1441,7 +1516,12 @@ else
         FILENAME="${FULLNAME%.*}"
 #DEKLARERAD        DIR=$(dirname $X | sed s/\'//g)
         sed --in-place '/Roll-id/d' "$DIR"/script.$FILENAME.out
-	echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 
         echo 'roll-id' >> $HOME/tmp/add_exif/added
 #        echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
@@ -1466,7 +1546,8 @@ else
          fi
          echo "$ROLL" > $HOME/tmp/add_exif/.exifrollhistory
  	 sed --in-place '/Roll-id/d' "$DIR"/script.$FILENAME.out
-         echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+	 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+         echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
          echo 'roll-id' >> $HOME/tmp/add_exif/added
 #         echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
       done
@@ -1530,10 +1611,15 @@ if [ -z "$OUT" ]
 		FULLNAME=$(basename "$LIST")
 		FILENAME="${FULLNAME%.*}"
 #DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
 		       sed --in-place '/COMMENT:/,/COMMENT./d' "$DIR"/script.$FILENAME.out
+		       APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
                    echo " 
 # COMMENT:"  >> "$DIR"/script.$FILENAME.out
-		   echo "exiv2 -M\"add Exif.Photo.UserComment $OUT\" modify $DIR/$FILENAME*.???" >>"$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"add Exif.Photo.UserComment $OUT\" modify $DIR/$FILENAME*.$APPLYON" >>"$DIR"/script.$FILENAME.out
 		   echo "# COMMENT.
    "  >> "$DIR"/script.$FILENAME.out
 		done
@@ -1838,9 +1924,14 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
 #DEKLARERAD  	DIR=$(dirname $X | sed s/\'//g)
 
           if [ "$OUT" != "X" ]
-            then #echo "exiv2 -M\"del Exif.Photo.UserComment\" modify      $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+            then #echo "exiv2 -M\"del Exif.Photo.UserComment\" modify      $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
                  sed --in-place '/Film:/d' "$DIR"/script.$FILENAME.out
-		 echo "exiv2 -M\"add Exif.Photo.UserComment Film: $OUT\" modify $DIR/$FILENAME*.???" >> "$DIR"/script.$FILENAME.out
+		 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		 echo "exiv2 -M\"add Exif.Photo.UserComment Film: $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
 #                echo 'Film' >> $HOME/tmp/add_exif/added
 #                echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
           fi
@@ -1963,6 +2054,45 @@ TIF=$(ls -l *.tif | wc -l)
 	     then exit 0 
 	   fi
 
+## Apply bash-settings for script: ###
+
+if [ `ls script.*.out|wc -l` -ge 1 ]
+	then for AB in $(ls script.*.out); do
+	     if [ `grep '#!/bin/bash' $AB|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s noglob' "$AB"
+		    sed --in-place '1 i \#\!\/bin\/bash' "$AB"
+	     fi
+	done
+fi
+
+
+
+## APPLY ON: ##
+
+	if [ -e "$HOME"/.add_exif.config/apply_on ]
+	   then APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	   else APPLYON='{tif,jpg}'
+	fi
+
+ 	dialog --title "File extensions" --inputbox "The following extensions were found in this folder. Be aware that choosen extensions are case sensitive!
+
+Examples: {jpg,JPG,tif,TIF} or {jpg,jpeg}
+
+I have found that certain raw-files like NEF will currupt if applied on!
+
+`ls *.$APPLYON|sed 's/.*\(...\)/\1/'|sort|uniq`" 0 0 "$APPLYON" --output-fd 1 >"$HOME"/.add_exif.config/apply_on
+
+	if [ `ls script.*.out|wc -l` -ge 1 ]
+	  then for BE in $(ls script.*.out); do
+            sed -i "s/\*.*$/\*.$APPLYON/g" $BE
+		# Also erase empty lines: #
+	    sed --in-place '/^[[:space:]]*$/d' $BE
+	done
+	fi
+
+## APPLY ON ##
+
+
    	   rm -rf "$HOME"/tmp/add_exif/.dialogout 
            dialog --separate-output --checklist "Choose exifdata:" 0 0 0 \
         DATE " " on \
@@ -1979,7 +2109,7 @@ TIF=$(ls -l *.tif | wc -l)
         SOFTWARE " " on \
         PHOTOGRAPHER " " on \
 	COMMENT " " on \
-	GPSDATA " " off \
+	GPSDATA " " on \
 2> "$HOME"/tmp/add_exif/.dialogout
 
 for Y in $(cat "$HOME"/tmp/add_exif/.list); do
