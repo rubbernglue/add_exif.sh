@@ -21,8 +21,8 @@ $REM1
 $REM2" 0 0 ; exit 0
 fi
 
-which dialog || 'echo "Package: Dialog not found!"; exit 1'
-which exiv2 || 'echo "Package: exiv2 not found!"; exit 1'
+which dialog 2>&1 >/dev/null|| `echo "Package: Dialog not found!"; exit 1`
+which exiv2 2>&1 >/dev/null|| `echo "Package: exiv2 not found!"; exit 1`
 #DELDATE=`date +%s`
 
 if [ ! -e $HOME/tmp/add_exif ]
@@ -38,6 +38,8 @@ Programs needed in order to run this is:
 dialog
 exiv2
 md5sum (optional, and should be found in /usr/bin )
+and all possible script binaries
+
 
 And of course permission to write in your home directory - it will create the paths:
 $HOME/tmp/add_exif and $HOME/.add_exif.config for temporary settings during runtime.
@@ -105,7 +107,7 @@ fi
 #       echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 done
@@ -304,7 +306,7 @@ Type ex. Adox Adonal" 12 50 2> $HOME/tmp/add_exif/.dev;;
 	   echo 'developed' >> $HOME/tmp/add_exif/added
 
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 #	   echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
@@ -364,7 +366,7 @@ do
 	echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
         echo "exiv2 -M\"set Exif.Photo.ExposureProgram "$MODE"\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
   fi
@@ -470,7 +472,7 @@ Whatever you write will be accepted and sent to script-file, without any correct
     	 esac
 	 fi
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 	 echo 'FNumber' >> $HOME/tmp/add_exif/added
@@ -524,7 +526,7 @@ echo "$OUT" > "$HOME"/tmp/add_exif/.speed
 	        echo 'ExposureTime' >> $HOME/tmp/add_exif/added
 #                echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
 	 fi
@@ -571,7 +573,7 @@ do
 #	   	   echo 'FocalLength' >> $HOME/tmp/add_exif/added
 #           	   echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE";;
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi;;
 	  esac
@@ -784,7 +786,7 @@ fi
 		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		   echo "exiv2 -M\"set Exif.Photo.LensModel $LENSUSED1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
 
@@ -804,7 +806,7 @@ fi
                         APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		   	echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $F3/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 			if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-			       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+			       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 			fi
 		   else	echo "FocalLength `echo $F3` NOT added to exif!
@@ -947,7 +949,7 @@ if [ -z "$OUT" ]
 		   echo "# GPS End.
    "  >> "$DIR"/script.$FILENAME.out
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
    		done ;;
@@ -1088,7 +1090,7 @@ if [ -z "$OUT" ]
 		   echo "# GPS End.
    "  >> "$DIR"/script.$FILENAME.out
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
 		done;;
@@ -1145,7 +1147,7 @@ else
 	         echo "exiv2 -M\"add Exif.Photo.UserComment $PUSH1 pushed to $PUSH2\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
           fi
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
           echo 'Push' >> $HOME/tmp/add_exif/added
@@ -1243,7 +1245,7 @@ else
   echo 'Artist'    >> $HOME/tmp/add_exif/added
   echo 'Copyright' >> $HOME/tmp/add_exif/added
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 #  echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
@@ -1371,7 +1373,7 @@ GIMPVERSION=`gimp --version|awk '{print $6}' 2>/dev/null`
 #	        echo 'Scanned' >> $HOME/tmp/add_exif/added
 	 fi
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
  done
@@ -1462,7 +1464,7 @@ Model: Edixa XXXXX
 #         echo 'Image.Make' >> $HOME/tmp/add_exif/added
   fi
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 #  echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
@@ -1519,7 +1521,7 @@ else
 	APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 	echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 
@@ -1612,7 +1614,7 @@ if [ -z "$OUT" ]
 		FILENAME="${FULLNAME%.*}"
 #DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
 		       sed --in-place '/COMMENT:/,/COMMENT./d' "$DIR"/script.$FILENAME.out
@@ -1929,7 +1931,7 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
 		 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		 echo "exiv2 -M\"add Exif.Photo.UserComment Film: $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s noglob' "$DIR"/script.$FILENAME.out
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
 #                echo 'Film' >> $HOME/tmp/add_exif/added
@@ -1939,6 +1941,35 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  fi
 fi
 }
+
+HELP () {
+
+ echo "
+Start script in folder containing image-files which can be tagged with exif-data and are writable by exiv2.
+The script is best used in a folder containing ie. one roll of scanned film which you have some data for.
+
+You can read just how to add your data in the inputbox you are in, for example the syntax for GPS, DATE and more.
+If you dont have the entire date for example, you may just set a year.
+
+If you have started a function ie. 'DATE' or whatever, you can ofter use 'X' as input or 'Cancel' button to skip to the next.
+
+Run script with -r to remove data from existing scripts easely. The menu will open up where you can choose specific files 
+and just choose which data to clean.
+
+Before running a script for the second time, or simply because you want to remove all/old exif in a file:
+exiv2 -Pkyct filnamn
+
+If you want to run all your scripts without adding any new data to your files; start the script in folder and when 
+you reach the menu - do cancel, which will take you to the option of 'cleaning' and running the generated scriptfiles.
+
+Each scriptfile can be run by:
+sh script.filename.out
+
+
+Any questions regarding functionality, bugs, whatever - please mail me on johan.g.lindgren@gmail.com"
+}
+
+
 
 RUNGPS () {
 TOP='Adding images to $HOME/tmp/add_exif/.list'
@@ -2059,7 +2090,7 @@ TIF=$(ls -l *.tif | wc -l)
 if [ `ls script.*.out|wc -l` -ge 1 ]
 	then for AB in $(ls script.*.out); do
 	     if [ `grep '#!/bin/bash' $AB|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s noglob' "$AB"
+	       then sed --in-place '1 i shopt -s nullglob' "$AB"
 		    sed --in-place '1 i \#\!\/bin\/bash' "$AB"
 	     fi
 	done
