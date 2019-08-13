@@ -856,14 +856,22 @@ fi
 }
 
 
-GPSDATA () {
+GPSDATAOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
        sed --in-place '/Exif.GPSInfo/d' "$X"
        sed --in-place '/GPS\ Data:/d' "$X"
        sed --in-place '/GPS\ End./d' "$X"
      done
-else GPSFORMAT=$(dialog --title "Which GPS Format?" --menu "Types:" 0 0 0 "1" "60 10 11.5N 024 57 06.4E" "2" "N 64 32 5.3, E 12 24 3.6" --output-fd 1)
+else GPSFORMAT=$(dialog --title "Which GPS Format?" --menu "Types:
+Common:
+48°51'29.60\"N 2°17'36.90\"E or 60 10 11.5N 024 57 06.4E
+
+Not so common:
+N 64 32 5.3, E 12 24 3.6
+
+
+" 0 0 0 "1" "Common" "2" "Not so common" --output-fd 1)
    case "$GPSFORMAT" in
 	1)GPSDATA1;;
 	2)GPSDATA2;;
@@ -872,7 +880,7 @@ fi
 
 }
 
-GPSDATA1 () {
+GPSDATAOLD1 () {
 
 #bort med ev. gammnal fil.
 rm -rf /$HOME/tmp/add_exif/.gps
@@ -901,8 +909,11 @@ This Menu will return!
 dialog --title "List of files" --inputbox "Write your GPS tag using the following format:
 $choise
 
-60 10 11.5N 024 57 06.4E
+60 10 11.5N 024 57 06.4E or 48°51'29.60\"N 2°17'36.90\"E
 Must be, degrees, minutes AND seconds!" 0 0 " " 2>$HOME/tmp/add_exif/.gps
+
+#format some coordinates to fit accoordingly:
+sed -i s/\'/\ /g $HOME/tmp/add_exif/.gps ; sed -i 's/\"//g ; s/°/ /g' $HOME/tmp/add_exif/.gps
 
 
 # sed removed empty spaces in the beginning of the gps-string:
@@ -978,7 +989,8 @@ fi
 
 
 
-GPSDATA2 () {
+
+GPSDATAOLD2 () {
 
 rm -rf /$HOME/tmp/add_exif/.gps
 
@@ -1113,6 +1125,199 @@ if [ $? = 2 ]
   then exit 0
 fi 
 }
+
+
+GPSDATA () {
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
+then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+       sed --in-place '/Exif.GPSInfo/d' "$X"
+       sed --in-place '/GPS\ Data:/d' "$X"
+       sed --in-place '/GPS\ End./d' "$X"
+     done
+fi
+
+#bort med ev. gammnal fil.
+rm -rf /$HOME/tmp/add_exif/.gps
+
+while true; do
+
+pkglist=""
+for pkg in $(cat $HOME/tmp/add_exif/.list); do
+	FULLNAME=$(basename "$pkg")
+	FILENAME="${FULLNAME%.*}"
+	if [ `grep 'GPSInfo' "$DIR"/script.$FILENAME.out|wc -l` -ge 1 ]
+		then OPT='GPS'
+		else OPT='~'
+	fi
+	pkglist="$pkglist $pkg $OPT off "
+done
+
+choise=$(/usr/bin/dialog --checklist "GPSDATA:
+
+Chose one or more files FOR EACH coordinates
+
+This Menu will return!
+
+!!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
+
+dialog --title "List of files" --inputbox "Write your GPS tag using one of these following formats:
+
+Will apply on: $choise
+
+N 64 32 5.3, E 12 24 3.6
+60 10 11.5N 024 57 06.4E
+48°51'29.60\"N 2°17'36.90\"E
+
+Must be, degrees, minutes AND seconds!" 0 0 " " 2>$HOME/tmp/add_exif/.gps
+
+#format some coordinates to fit accoordingly:
+sed -i s/\'/\ /g $HOME/tmp/add_exif/.gps ; sed -i 's/\"//g ; s/°/ /g' $HOME/tmp/add_exif/.gps
+
+
+# sed removed empty spaces in the beginning of the gps-string:
+OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
+
+if [ -z "$OUT" ]
+  then echo "NO..." ; OUT=NOGPS
+  else echo "YES!";
+  case "$OUT" in
+	[0-9][0-9]\ [0-9][0-9]\ [0-9][0-9]\.[0-9]*[NS]*[WE])
+		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
+		 G4=`echo "$OUT"|awk '{print $4}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 G6=`echo "$OUT"|awk '{print $6}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
+		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
+		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
+
+		echo "before $choise"
+		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
+		echo "$choise" > $HOME/tmp/add_exif/.gpslist
+
+		for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
+
+		FULLNAME=$(basename "$LIST")
+		FILENAME="${FULLNAME%.*}"
+		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
+		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
+		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
+		   echo "$FILENAME ..."
+		   echo " 
+# GPS Data:"  >> "$DIR"/script.$FILENAME.out
+		   sed --in-place '/Exif.GPSInfo/d' "$X"
+		   sed --in-place '/GPS\ Data:/d' "$X"
+		   sed --in-place '/GPS\ End./d' "$X"
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GWE\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $G1 $G2 $G3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		   echo "# GPS End.
+   "  >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
+		done ;;
+   [NS]\ ??\ ??\ ????\ [WE]\ ??\ ??\ ???)
+		GPS1=`echo "$OUT" | awk '{print $1}'`
+		GPS2=`echo "$OUT" | awk '{print $2}'`
+		if [ "$GPS2" = `echo "$GPS2" | sed 's/\.//g'` ]
+		  then BY1=1
+		  else BY1=10
+		fi
+
+		GPS3=`echo "$OUT" | awk '{print $3}'`
+		if [ "$GPS3" = `echo "$GPS3" | sed 's/\.//g'` ]
+		  then BY2=1
+		  else BY2=10
+		fi
+
+		GPS4=`echo "$OUT" | awk '{print $4}' | sed 's/,//g'`
+		if [ "$GPS4" = `echo "$GPS4" | sed 's/\.//g'` ]
+		  then BY3=1
+		  else BY3=10
+		       GPS4=`echo $GPS4 | sed 's/\.//g'`
+		fi
+
+		GPS5=`echo "$OUT" | awk '{print $5}'`
+
+		GPS6=`echo "$OUT" | awk '{print $6}'`
+		if [ "$GPS6" = `echo "$GPS6" | sed 's/\.//g'` ]
+		  then BY4=1
+		  else BY4=10
+		fi
+
+		GPS7=`echo "$OUT" | awk '{print $7}'`
+		if [ "$GPS7" = `echo "$GPS7" | sed 's/\.//g'` ]
+		  then BY5=1
+		  else BY5=10
+		fi
+
+		GPS8=`echo "$OUT" | awk '{print $8}'`
+		if [ "$GPS8" = `echo "$GPS8" | sed 's/\.//g'` ]
+		  then BY6=1
+		  else BY6=10
+		       GPS8=`echo $GPS8 | sed 's/\.//g'`
+		fi
+	echo "before $choise"
+	choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
+	echo "$choise" > $HOME/tmp/add_exif/.gpslist
+	for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
+	FULLNAME=$(basename "$LIST")
+	FILENAME="${FULLNAME%.*}"
+#DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
+	       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
+	       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
+	       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
+	   echo " 
+# GPS Data:"  >> "$DIR"/script.$FILENAME.out
+	   sed --in-place '/Exif.GPSInfo/d' "$X"
+	   sed --in-place '/GPS\ Data:/d' "$X"
+	   sed --in-place '/GPS\ End./d' "$X"
+	   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+	   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GPS1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GPS5\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $GPS2/$BY1 $GPS3/$BY2 $GPS4/$BY3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $GPS6/$BY4 $GPS7/$BY5 $GPS8/$BY6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	   echo "# GPS End.
+"  >> "$DIR"/script.$FILENAME.out
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
+   done
+   ;;
+	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
+esac
+fi
+#TODO
+#- konvertera googles decimal-coordinater till "vanliga" finns info här:
+#  https://gis.stackexchange.com/questions/62103/how-do-you-convert-to-degrees-and-minutes-from-8-9-digit-lat-lon-dms-code
+#- If bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
+dialog --title "Coordinates" --defaultyes --yesno "Add more coordinates?" 0 0
+if [ $? = 1 ]
+ then break
+ else echo "om igen..." 
+fi
+
+#End of menu-loop:
+done
+
+if [ $? = 2 ]
+  then exit 0
+fi 
+
+}
+
+
+
+
 
 ISO () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
@@ -1963,6 +2168,7 @@ If you want to run all your scripts without adding any new data to your files; s
 you reach the menu - do cancel, which will take you to the option of 'cleaning' and running the generated scriptfiles.
 
 Each scriptfile can be run by:
+
 sh script.filename.out
 
 
@@ -1970,7 +2176,7 @@ Any questions regarding functionality, bugs, whatever - please mail me on johan.
 }
 
 
-
+# Start script with 'add_exif.sh RUNGPS' in order to only do GPS (fastmode.
 RUNGPS () {
 TOP='Adding images to $HOME/tmp/add_exif/.list'
 TIF=$(ls -l *.tif | wc -l)
@@ -2105,6 +2311,7 @@ fi
 	   else APPLYON='{tif,jpg}'
 	fi
 
+EXT () {
  	dialog --title "File extensions" --inputbox "The following extensions were found in this folder. Be aware that choosen extensions are case sensitive!
 
 Examples: {jpg,JPG,tif,TIF} or {jpg,jpeg}
@@ -2112,6 +2319,18 @@ Examples: {jpg,JPG,tif,TIF} or {jpg,jpeg}
 I have found that certain raw-files like NEF will currupt if applied on!
 
 `ls *.$APPLYON|sed 's/.*\(...\)/\1/'|sort|uniq`" 0 0 "$APPLYON" --output-fd 1 >"$HOME"/.add_exif.config/apply_on
+}
+
+EXT
+ 	if [ `cat "$HOME"/.add_exif.config/apply_on|wc -c` -ne $(expr `cat "$HOME"/.add_exif.config/apply_on|sed 's/{//g ; s/}//g'|wc -c` + 2) ]
+		then dialog --title 'Really??' --msgbox "Your input `cat "$HOME"/.add_exif.config/apply_on` does not seem right
+
+should be syntax like: {jpg,TIF}"
+
+		     EXT
+	fi
+
+        APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 
 	if [ `ls script.*.out|wc -l` -ge 1 ]
 	  then for BE in $(ls script.*.out); do
