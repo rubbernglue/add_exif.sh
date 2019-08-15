@@ -66,7 +66,6 @@ fi
 
 
 DATE () {
-
 #For removing exif#
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
  then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -809,8 +808,10 @@ fi
 			       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 			fi
-		   else	echo "FocalLength `echo $F3` NOT added to exif!
+		   else	if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
+                           then echo "FocalLength `echo $F3` NOT added to exif!
 - Probably there was no value in the Lenses configuration-file."
+			fi
 		   	sleep 1
 		fi
 
@@ -855,7 +856,7 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 fi
 }
 
-
+#Deprecated
 GPSDATAOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -880,6 +881,7 @@ fi
 
 }
 
+#Deprecated
 GPSDATAOLD1 () {
 
 #bort med ev. gammnal fil.
@@ -989,7 +991,7 @@ fi
 
 
 
-
+#Deprecated
 GPSDATAOLD2 () {
 
 rm -rf /$HOME/tmp/add_exif/.gps
@@ -1160,7 +1162,12 @@ This Menu will return!
 
 !!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
 
-dialog --title "List of files" --inputbox "Write your GPS tag using one of these following formats:
+#echo $choise
+#echo "$choise"|wc -l
+#read ANS
+
+if [ ${#choise} -ge 3 ];
+	then dialog --title "List of files" --inputbox "Write your GPS tag using one of these following formats:
 
 Will apply on: $choise
 
@@ -1169,6 +1176,8 @@ N 64 32 5.3, E 12 24 3.6
 48°51'29.60\"N 2°17'36.90\"E
 
 Must be, degrees, minutes AND seconds!" 0 0 " " 2>$HOME/tmp/add_exif/.gps
+#	else dialog --title "Error" --msgbox "No files selected"
+fi
 
 #format some coordinates to fit accoordingly:
 sed -i s/\'/\ /g $HOME/tmp/add_exif/.gps ; sed -i 's/\"//g ; s/°/ /g' $HOME/tmp/add_exif/.gps
@@ -1181,7 +1190,7 @@ if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOGPS
   else echo "YES!";
   case "$OUT" in
-	[0-9][0-9]\ [0-9][0-9]\ [0-9][0-9]\.[0-9]*[NS]*[WE])
+	[0-9][0-9]\ [0-9][0-9]\ [0-9]*\.[0-9]*[NS]*[WE])
 		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
 		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
 		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
@@ -2254,7 +2263,7 @@ if [ $? = 1 ]
 #for Y in $(cat "$HOME"/tmp/add_exif/.dialogout); do
 #echo "### AAAAAAAAAAAAAAAAAAAAAAAAAAA 1 ###"
   for DLG in $(cat "$HOME"/tmp/add_exif/.dialogout); do
-    "$DLG"
+    "$DLG" $DEBUG
   done; #rm "$HOME"/tmp/add_exif/.remove.list
 
 #done; rm -rf "$HOME"/tmp/add_exif/.remove.list >/dev/null
@@ -2365,7 +2374,7 @@ should be syntax like: {jpg,TIF}"
 for Y in $(cat "$HOME"/tmp/add_exif/.list); do
   exiv2 -dx "$Y"
   for DLG in $(cat "$HOME"/tmp/add_exif/.dialogout); do
-    $DLG #; clear
+    $DLG $DEBUG #; clear
   done
 
   echo ""
@@ -2396,6 +2405,12 @@ case $FIN in
     do pkglist="$pkglist $pkg ~ "; done
 
    echo $pkglist
+
+# Debugging, to stop from proceeding.
+   if [ $1 = Y ]; then read D; fi
+
+ 
+
    while choise=`/usr/bin/dialog --stdout --menu "Items:" 0 45 0 $pkglist`; do
    if [ $? = 1 ]
      then break
@@ -2435,12 +2450,12 @@ hit Enter to continue."
 		  clear
 		  dialog --title "Execute the following..." --yesno "`ls $DIR/script.*`" 20 45
 		if [ $? = 0 ]
-		then
-		  for B in $(ls $DIR/script.*);
-		    do echo "Running $B"
-		       sh "$B"
-		    done
-		  rm $HOME/tmp/add_exif/.list.first 2>/dev/null
+		then clear
+		     for B in $(ls $DIR/script.*);
+		        do echo "Running $B"
+		           sh "$B"
+		done
+		rm $HOME/tmp/add_exif/.list.first 2>/dev/null
 		fi
 	exit 0;; #utan denna exit startar den om scriptet??
 *)exit 0;;      #dialog --title "WTF" --msgbox "How did you end up here??!" 20 20
@@ -2449,17 +2464,24 @@ esac
 done
 ### stop ####
 }
-FINAL $X
+
+### Why did I add $X here?! Changed to $1 for DEBUG variable.
+#FINAL $X
+FINAL $1
+
 done
 exit 0
 }
 
 
+DEBUG=N
 case $1 in
  -h|--help|--h)HELP ; exit 0;;
 # -gps|-GPS|gps|GPS);;
  -remove|-r)touch $HOME/tmp/add_exif/.remove && rm -rf "$HOME"/tmp/add_exif/.dialogout && RUNREMOVE;;
- *)RUN;;
+       -gps)RUNGPS;;
+     -debug)DEBUG=Y ; RUN $DEBUG;;
+	  *)RUN $DEBUG;;
 esac
 
 #echo "running RUN $1"
