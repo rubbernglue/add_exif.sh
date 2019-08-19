@@ -421,7 +421,8 @@ rm $HOME/tmp/add_exif/.exifprogramhistory
 fi
 }
 
-APERTURE () {
+#deprecated
+APERTUREOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
 #	echo "removing APERTURE tag in $X"
@@ -449,11 +450,11 @@ do
      	  1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|18|20|22|32|45|64|90|125|128|135|180|256|360|512)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/1\" modify  $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
-     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.5|2.6|2.8|3.2|3.5|4.5|5.6|6.7)
+     	  0.95|1.1|1.2|1.4|1.5|1.6|1.7|1.8|1.9|2.2|2.4|2.5|2.6|2.7|2.8|2.9|3.2|3.3|3.5|4.5|4.8|5.6|6.3|6.7|7.1|9.5)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\.//g'`
      	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
-       	  0,95|1,1|1,2|1,4|1,5|1,6|1,7|1,8|1,9|2,2|2,5|2,6|2,8|3,2|3,5|4,5|5,6|7,1)
+       	  0.95|1,1|1,2|1,4|1,5|1,6|1,7|1,8|1,9|2,2|2,4|2,5|2,6|2,7|2,8|2,9|3,2|3,3|3,5|4,5|4,8|5,6|6,3|6,7|7,1|9,5)
 	      sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 	      OUT=`echo "$OUT"|sed 's/\,//g'`
        	      echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT/10\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out ;;
@@ -479,6 +480,73 @@ Whatever you write will be accepted and sent to script-file, without any correct
 done
 fi
 }
+
+
+APERTURE () {
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
+then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+       sed --in-place '/Exif.Photo.FNumber/d' "$X"
+     done
+else
+clear
+
+ALL=N
+ASK=N
+
+for X in $(cat $HOME/tmp/add_exif/.list);
+do
+  FULLNAME=$(basename "$X")
+  FILENAME="${FULLNAME%.*}"
+DEKLARERAD  DIR=$(dirname $X | se\'//g)
+
+if [ -e "$HOME"/tmp/add_exif/.aperture ]
+	then SP=`cat $HOME/tmp/add_exif/.aperture|awk '{print $1}'`
+	else SP="f/"
+fi
+
+if [ $ALL = N ]
+	then OUT=$(dialog --title "Aperture" --inputbox "Example:
+- f/5.6
+- Type X do skip this file.
+
+$FILENAME
+" 0 0 "$SP" --output-fd 1) 
+	else OUT="$SP"
+fi
+
+
+if [ $ALL = N -a $ASK = N ]
+	then $(dialog --title "Aperture" --defaultno --yesno "Same setting for all?" 0 0 --output-fd 1)
+		if [ $? = 0 ]
+		  then ALL=Y
+		       ASK=Y
+		  else ASK=Y
+		fi
+fi
+
+echo "$OUT" > "$HOME"/tmp/add_exif/.aperture
+
+if [ `echo $OUT|grep "\."|wc -l` = 1 -o `echo $OUT|grep \,|wc -l` = 1 ]
+	then OUT="`echo $OUT|cut -d\/ -f2|sed 's/\.//g ; s/,//g'`/10"
+	else OUT="`echo $OUT|cut -d\/ -f2`/1"
+fi
+	 if [ "$OUT" = "X" ]
+	   then echo "skipping..."
+	   else sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
+		APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		echo "exiv2 -M\"del Exif.Photo.FNumber Rational $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		echo "exiv2 -M\"add Exif.Photo.FNumber Rational $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
+	 fi
+done
+fi
+}
+
+
+
 
 SPEED () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
@@ -635,7 +703,8 @@ done
 
 if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
   then AMOUNT=$(grep Exif.Photo.LensModel "$DIR"/script.*|wc -l)
-       EXTRA="$AMOUNT of these chosen files allready has LENSMODEL data."
+         if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
+         EXTRA="$AMOUNT of these chosen files allready has LENSMODEL data."
 fi
 
 ##########################
@@ -923,7 +992,7 @@ OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
 
 if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOGPS
-  else echo "YES!";
+  else #echo "YES!";
   case `echo "$OUT"|awk '{print $3}'|rev` in
 	N*|S*)
 		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
@@ -935,7 +1004,7 @@ if [ -z "$OUT" ]
 		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
 		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
 
-		echo "before $choise"
+#		echo "before $choise"
 		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 		echo "$choise" > $HOME/tmp/add_exif/.gpslist
 
@@ -1200,7 +1269,7 @@ if [ -z "$OUT" ]
 		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
 		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
 
-		echo "before $choise"
+#		echo "before $choise"
 		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 		echo "$choise" > $HOME/tmp/add_exif/.gpslist
 
@@ -1613,6 +1682,10 @@ else
              echo "Pentax Model? ex LX"
              read TYPE
 	     OUT="Asahi Pentax";;
+    zeiss-ikon|"zeiss ikon"|zeissikon|"Zeiss Ikon"|"ZEISS IKON"|ZEISSIKON|ZEISS-IKON|"Zeiss IKON")
+    	     echo "Which Zeiss IKON?, ex. Super Ikonta"
+	     read TYPE
+	     OUT="Zeiss IKON AG";;
         nikon|Nikon|NIKON)
              echo "Nikon Model? ex FA"
              read TYPE
@@ -1855,6 +1928,7 @@ done
 fi
 }
 
+#deprecated
 DISABLE_FOR () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 then MD5SUM="/usr/bin/md5sum"
@@ -1894,6 +1968,7 @@ fi
 }
 
 FILM () {
+
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then MD5SUM="/usr/bin/md5sum"
      for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -1908,6 +1983,19 @@ then MD5SUM="/usr/bin/md5sum"
 	fi
      done
 else
+
+FILMSETTING=$(dialog --title "Which film" --menu "Two ways..." 0 0 0 "List types of films" "" "Write type of film" "" --output-fd 1)
+#read BAH
+case $FILMSETTING in
+	List*)FILMA;;
+	Write*)FILMB;;
+esac
+fi
+#read BAH
+}
+
+
+FILMA () {
  dialog --title "Which film?"  --menu "Options:" 20 40 60 \
 	"Kodak" "" \
 	"Ilford" "" \
@@ -1922,7 +2010,7 @@ else
 	"Agfa-Gevaert" "" \
 	"AgfaPhoto" "" \
 	"ORWO" "" \
-	"Efke" "" \
+	"EFKE" "" \
 	"CHM" "" \
 	"Holga" "" \
 	"DM Paradies 200" "" \
@@ -2086,12 +2174,13 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  	"CHM 100 Universal" "" \
  	"CHM 400 Universal" "" \
 2> $HOME/tmp/add_exif/.film ;;
- 'Efke')dialog --title "Efke"  --menu "Options:" 20 40 60 \
+ 'EFKE')dialog --title "Efke"  --menu "Options:" 20 40 60 \
 	"Efke IR 820" "" \
         "Efke R 100" "" \
 	"Efke KB 100" "" \
 	"Efke KB 50" "" \
 	"Efke KB 25" "" \
+        "Efke R17" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'Orwo')dialog --title "ORWO"  --menu "Options:" 20 40 60 \
 	"ORWO NP15" "" \
@@ -2153,8 +2242,52 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
           fi
 	done
  fi
-fi
 }
+
+
+
+FILMB () {
+
+#read BAH
+if [ -e $HOME/.add_exif.config/lastfilm ];
+	then LASTFILM=`cat $HOME/.add_exif.config/lastfilm`;
+fi
+#read NAH
+dialog --title "Which film is this?"  --inputbox "Film input manually: 
+
+Example:
+Kodak Ektar 100
+
+" 20 40 "$LASTFILM" 2>$HOME/tmp/add_exif/.film
+cp $HOME/tmp/add_exif/.film $HOME/.add_exif.config/lastfilm
+#read BAH
+OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
+
+ if [ -z $OUT 2>/dev/null ]
+  then echo "No film was chosen"
+  else for X in $(cat $HOME/tmp/add_exif/.list);
+       do
+	FULLNAME=$(basename "$X")
+	FILENAME="${FULLNAME%.*}"
+#DEKLARERAD  	DIR=$(dirname $X | sed s/\'//g)
+
+	  if [ "$OUT" != "X" ]
+	    then #echo "exiv2 -M\"del Exif.Photo.UserComment\" modify      $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		 sed --in-place '/Film:/d' "$DIR"/script.$FILENAME.out
+		 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		 echo "exiv2 -M\"add Exif.Photo.UserComment Film: $OUT\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
+#                echo 'Film' >> $HOME/tmp/add_exif/added
+#                echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
+	  fi
+	done
+ fi
+#ead BAH
+}
+
 
 HELP () {
 
@@ -2355,10 +2488,10 @@ should be syntax like: {jpg,TIF}"
    	   rm -rf "$HOME"/tmp/add_exif/.dialogout 
            dialog --separate-output --checklist "Choose exifdata:" 0 0 0 \
         DATE " " on \
-        PROGRAM " " on \
+        PROGRAM "PSAM" on \
         APERTURE " " on \
         SPEED " " on \
-        LENS " " off \
+        LENS "Focallength only" off \
 	LENSMODEL " " on \
         ISO " " on \
         FILM " " on \
