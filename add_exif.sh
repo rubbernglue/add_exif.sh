@@ -1764,86 +1764,61 @@ fi
 
 ROLLNR () {
 
-	########## EXPLANATION ############
-	#				
-	#  I use this funktion in order to
-	#  keep track of my rolls, and which
-	#  roll that should be crossed which
-	#  which exif-data. So if I start a 
-	#  new roll, I will give that roll 
-	#  a number - this is that number.
-	#
-	###################################
+########## EXPLANATION ############
+#				
+#  I use this funktion in order to
+#  keep track of my rolls, and which
+#  roll that should be crossed which
+#  which exif-data. So if I start a 
+#  new roll, I will give that roll 
+#  a number - this is that number.
+#
+###################################
 
-if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
-then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
-       sed --in-place '/Roll-id/d' "$X"
-     done
-else
-#ROLL=`dialog --title "One or several?" --defaultno --yesno "Is this about more than one roll or sheet?" 7 45`
- dialog --title "One or several?" --defaultno --yesno "Is this about more than one roll or sheet?" 7 45
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
+ then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+ sed --in-place '/Roll-id/d' "$X"
+ done
+ else
 
- if [ $? = 1 ]
-	  if [ `echo $FILENAME|awk 'print $1' 2>/dev/null` -le 99999 ]
-	    then NUMBER=`echo $FILENAME|awk 'print $1'`
-	    else NUMBER="$FILENAME"
-	  fi
+ clear
+ ASK=N
+ ROLL=N
 
-  then echo ""
-     echo "-------------------[ ONE ROLL $NUMBER ]-----------------"
-     echo ""
-     echo "Type roll-id number:"
+ for X in $(cat $HOME/tmp/add_exif/.list);
+ do
+   FULLNAME=$(basename "$X")
+   FILENAME="${FULLNAME%.*}"
 
-     read ROLL
+if [ $ASK = N ]
+	then ASK=Y
+	     ALL=$(dialog --title "All or individual?" --menu "All frames or Individual?" 0 0 0 "All frames with same ROLL-nr" "" "Individual Roll-nr" "" --output-fd 1)
+fi
 
-  if [ -z "$ROLL" ];
-   then echo "No roll-id?? ok, skipping this one."; read ANS 
-   else
-      for X in $(cat $HOME/tmp/add_exif/.list);
-      do
-        FULLNAME=$(basename "$X")
-        FILENAME="${FULLNAME%.*}"
-#DEKLARERAD        DIR=$(dirname $X | sed s/\'//g)
-        sed --in-place '/Roll-id/d' "$DIR"/script.$FILENAME.out
-	APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-	echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
-		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+if [ "$ALL" = "Individual Roll-nr" -o "$ROLL" = "N" ]
+	then if [ "$ROLL" = "N" ]; then ROLL=100 ; fi
+	     ROLL=$(dialog --title "Rollnumber" --inputbox "Example:
+This is only to keep track of which number in a
+sequence a sheet or roll has.
+
+          $FULLNAME
+" 0 0 "$ROLL" --output-fd 1)
+fi
+
+if [ "$ROLL" = "N" ]
+	then echo "skipping..."
+	else sed --in-place '/Roll-id/d' "$DIR"/script.$FILENAME.out
+		APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+			then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
 	fi
-
-        echo 'roll-id' >> $HOME/tmp/add_exif/added
-#        echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
-      done
-   fi
-  else echo "-----------------------[ SEVERAL ROLLS ]------------------"
-     for X in $(cat $HOME/tmp/add_exif/.list);
-      do
-       FULLNAME=$(basename "$X")
-       FILENAME="${FULLNAME%.*}"
-#DEKLARERAD       DIR=$(dirname $X | sed s/\'//g)
-         echo ""
-         echo "------------------------[ $FILENAME ]---------------------"
-
-         if [ -e $HOME/tmp/add_exif/.exifrollhistory ]
-           then echo "Type roll-nr or if same as last, `cat $HOME/tmp/add_exif/.exifrollhistory` or none = X? [`cat $HOME/tmp/add_exif/.exifrollhistory`]"
-           else echo "Type roll-nr or X = dont know"
-         fi
-         read ROLL
-         if [ -z "$ROLL" ]
-           then ROLL=`cat $HOME/tmp/add_exif/.exifrollhistory 2>/dev/null`
-         fi
-         echo "$ROLL" > $HOME/tmp/add_exif/.exifrollhistory
- 	 sed --in-place '/Roll-id/d' "$DIR"/script.$FILENAME.out
-	 APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-         echo "exiv2 -M\"add Exif.Photo.UserComment Roll-id $ROLL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-         echo 'roll-id' >> $HOME/tmp/add_exif/added
-#         echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE"
-      done
-  rm $HOME/tmp/add_exif/.exifrollhistory
- fi
+done
 fi
 }
+
 
 
 COMMENT () {
