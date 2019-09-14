@@ -338,12 +338,17 @@ do
 	"A" "Aperture Priority" \
 	"M" "Manual" \
 	"x" "skip/unknown" --output-fd 1)
-         if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt 1 ]
+
+	if [ -z "$PROGRAMHIST" ]
+	   then break
+	fi
+
+        if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt 1 ]
 	 	then dialog --title "Repeat for all?" --yesno "All images with same shutter-setting?" 7 45 --output-fd 1
 		     REPEAT=$?
 		else REPEAT=0
-	 fi
-         BEENHERE="yes"
+	fi
+        BEENHERE="yes"
 	   else if [ "$REPEAT" != "0" -a "$BEENHERE" = "yes" ]
 		  then PROGRAMHIST=$(dialog --title "Shutter mode" --default-item "$PROGRAMHIST" --menu "File: $FILENAME" 0 0 0 \
 	"P" "Program" \
@@ -648,6 +653,240 @@ done
 fi
 }
 
+ADDCAM () {
+
+for X in $(cat $HOME/tmp/add_exif/.list);
+do
+FULLNAME=$(basename "$X")
+FILENAME="${FULLNAME%.*}"
+
+CAMMODEL=""
+MAKER=""
+pkg=""
+pkglist=""
+CAMUSED=""
+MAKERVALUE=""
+F1=""
+F2=""
+F3=""
+LM1=""
+LM2=""
+LM3=""
+
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+	then dialog --title "Cam and model" --yesno "All files selected? (or none)" 0 0
+		case $? in
+			0) MARKING=on ;;
+			1) MARKING=off;;
+		esac
+	else MARKING=1
+fi
+
+#list files
+for pkg in $(cat $HOME/tmp/add_exif/.list)
+	do
+	   a123=$(echo "$DIR"/script.`echo "$pkg"|sed 's/\./ /g'|awk '{print $1}'`.out)
+	   if [ -e "$a123" ]
+		then OPT=$(grep 'Exif.Image.Model' "$a123"|sed 's/\// /g ; s/\"//g'|awk '{print $4}'|sed 's/\ /_/g')
+		     if [ ${#OPT} -le 1 -o "$OPT" = "modify" ]
+		       then OPT='~'
+		       else if [ `grep 'add Exif.Image.Make' "$a123"|wc -l` -ge 1 -o "$OPT" != "modify" ]
+         			then OPTM=$(grep 'Exif.Image.Make' "$a123"|sed 's/\// /g ; s/\"//g'|awk '{print $4}')
+				     OPT=`echo $OPTM $OPT|sed 's/\ /_/g'`
+                            fi
+		     fi
+		else OPT='~'
+	   fi
+	   pkglist="$pkglist $pkg "$OPT" "$MARKING" "
+done
+
+if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
+  then AMOUNT=$(grep Exif.Image.Model "$DIR"/script.*|wc -l)
+	 if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
+	 EXTRA="$AMOUNT of these chosen files allready has a Camera set."
+fi
+
+##########################
+#exit 0
+##########################
+
+choise=$(/usr/bin/dialog --checklist "CAM MODEL:
+
+Chose ALL or single files for EACH camera model
+
+$EXTRA
+
+This Menu will return!
+" 0 0 0 $pkglist --output-fd 1)
+
+if [ -z $choise ]
+ then break
+fi
+
+#Filtrera bort automatiskt skräp:
+#choise=`echo $choise | tr " " "\n"`
+#version 2: Ta även bort \ och " som kommer när det är specialtecken i filnamnet:
+choise=$(echo $choise | tr " " "\n"| sed 's/\"//g; s/\\//g')
+
+echo "$choise" > $HOME/tmp/add_exif/.camlist
+
+lenslist=""
+ for pkg in $(cat $HOME/.add_exif.config/lenses)
+	do pkglist="$pkglist $pkg ~ "
+done
+
+
+
+MAKERVALUE=""
+MAKERMODEL=""
+MAKER=""
+if [ -e "$HOME"/.add_exif.config/lenses ];
+	then CAMLIST="$HOME/.add_exif.config/cameras"
+		MAKER=""
+		for pkg in $(grep "$MAKERVALUE" "$CAMLIST" | cut -d'?' -f1|sort|uniq)
+			do MAKER="$MAKER $pkg -"
+		done
+
+		MAKERMODEL=$(cut -d'?' -f2 "$CAMLIST")
+
+		#List all makers (first field in lenses-file)
+		MAKERVALUE=$(/usr/bin/dialog --stdout --title "Choose mount" --menu "Lens MOUNT:" 0 0 0 $MAKER --output-fd 1)
+		
+		if [ -n "$MAKERVALUE" ];
+		  then F1=`grep "$MAKERVALUE" "$CAMLIST" | cut -d'?' -f2 | sed 's/ /_/g'`
+#		       echo MAKERMODEL 1: "$MAKERMODEL"
+#		       read bah
+		       pkglist=""
+		       for pkg in $(echo "$F1"| cut -d'!' -f1)
+			  do pkglist="$pkglist $pkg -"
+		       done
+		       echo "F1"
+		       echo pkglist 2: "$pkglist"
+#		       read bah
+
+		       #list all lenses within that maker
+		       CAMUSED=$(/usr/bin/dialog --stdout --menu "Chose lens" 0 0 0 `echo $pkglist` --output-fd 1)
+		fi
+		
+
+#
+# Lägg till option för att backa i menyn!
+#
+# Lägg till option för "other" vilket blir i praktiken samma som "cancel"
+#
+
+
+	else dialog --title "mah" --msgbox "some text here..." 0 0
+fi
+
+
+
+if [ -z "$CAMUSED" ]; then
+
+	LM1=$(dialog --title "LENS MOUNT" --inputbox "Write your lens MOUNT:
+
+    ### CREATING A LENS TO THE LIBRARY! 1/3 ###
+
+This is NOT a tag, but used to catagorize for you to easier find the lens again.
+
+NIKON (as in Nikon mount)
+or
+LUBITEL (as in camera with unreplacable lenses)
+" 0 0 --output-fd 1) || break
+
+if [ -n "$LM1" ]
+	then LM2=$(dialog --title "Type your lens." --inputbox "Write your lens model as following to look proper:
+
+    ### CREATING A LENS TO THE LIBRARY! 2/3 ###
+
+Micro-NIKKOR 200mm 1:4
+or
+NIKKOR AF-S DX 18-140mm 1:3.5-5.6 G ED VR
+
+" 0 0 --output-fd 1) || break
+
+	if [ -n "$LM1" -a -n "$LM2" ];
+		then LM3=$(dialog --title "focal length" --inputbox "Type the focal length:
+
+    ### CREATING A LENS TO THE LIBRARY! 3/3 ###
+
+75
+or
+75mm
+
+" 0 0 --output-fd 1) || break
+	#Remove any 'mm' in the name as somebody might do it wrong...
+	LM3=`echo "$LM3" | sed 's/mm//g'`
+	fi
+fi
+
+
+
+
+fi
+
+if [ -n "$LM1" -a -n "$LM2" ]
+	then echo "$LM1"?"$LM2"!"$LM3" >> "$HOME"/.add_exif.config/lenses
+#	     break #för att hoppa ur och välja nya gluggen ur nygenererad glugg-lista
+		CAMUSED="$LM2"
+		
+fi
+
+		if [ -z "$CAMUSED" ]
+		   then echo "NO!"
+			#echo $CAMUSED
+		   else echo "YES!" #; CAMUSED=NOLENS
+
+		for LIST in $(cat $HOME/tmp/add_exif/.camlist); do
+		FULLNAME=$(basename "$LIST")
+		FILENAME="${FULLNAME%.*}"
+#DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
+		#Remove old data:
+
+		   sed --in-place '/Exif.Photo.LensModel/d' "$DIR"/script.$FILENAME.out 2>/dev/null
+		#Add new data:
+		   CAMUSED1=`echo $CAMUSED|sed 's/_/ /g'`
+		   sed --in-place '/Exif.Photo.LensModel/d' "$DIR"/script.$FILENAME.out
+		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   echo "exiv2 -M\"set Exif.Photo.LensModel $CAMUSED1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		fi
+
+		if [ -z "$LM3" ]
+			then F2=$(echo "$CAMUSED" | sed 's/_/ /g') # | cut -d'!' -f2 | sed -e 's/mm//g' -e 's/MM//g')
+			     F3=$(grep "$F2" $HOME/.add_exif.config/lenses |cut -d'!' -f2 | sed -e 's/mm//g' -e 's/MM//g' )
+			else F3="$LM3"
+		fi
+
+#if lens is not a zoom, then add the focal length to exif aswell.
+#		FOCAL=$(grep "$CAMUSED" $CAMLIST | cut -d'_' -f3) 
+#
+#Checking if F3 is actually something equivalent to a focal lenth (a number) which most likely is lower than 10000.
+
+		if [ -n "$F3" -a "$F3" -lt 10000 2>/dev/null ]
+		   then sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out #2>/dev/null
+			APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+			echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $F3/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+			if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+			       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+			fi
+		   else	if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
+			   then echo "FocalLength `echo $F3` NOT added to exif!
+- Probably there was no value in the Lenses configuration-file."
+			fi
+			sleep 1
+		fi
+
+done #;break
+fi #
+
+done #; break
+}
+
+
 ADDLENS () {
 
 while true; do
@@ -925,276 +1164,220 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 fi
 }
 
-#Deprecated
-GPSDATAOLD () {
+
+
+
+CAMERA () {
+
+# remove old tag if remove action was used to start script.
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
-then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
-       sed --in-place '/Exif.GPSInfo/d' "$X"
-       sed --in-place '/GPS\ Data:/d' "$X"
-       sed --in-place '/GPS\ End./d' "$X"
-     done
-else GPSFORMAT=$(dialog --title "Which GPS Format?" --menu "Types:
-Common:
-48°51'29.60\"N 2°17'36.90\"E or 60 10 11.5N 024 57 06.4E
+	then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+	       sed --in-place '/Exif.Image.Make/d' "$X"
+	       sed --in-place '/Exif.Image.Model/d' "$X"
+	     done
+	else ADDCAM
 
-Not so common:
-N 64 32 5.3, E 12 24 3.6
+#Loop to return to menu after being done with the first selected
+#files, if there are more than one file.
+#	if [ `cat $HOME/tmp/add_exif/.list|wc -l` != `cat $HOME/tmp/add_exif/.camlist|wc -l` ]
+#		then dialog --title "Cameras" --defaultno --yesno "Add more Cameras?" 0 0
+#		if [ $? = 0 ]
+#		   then ADDCAM
+#		   else break
+#		fi 
+#	fi
+fi
+}
 
 
-" 0 0 0 "1" "Common" "2" "Not so common" --output-fd 1)
-   case "$GPSFORMAT" in
-	1)GPSDATA1;;
-	2)GPSDATA2;;
-   esac
+
+ADDCAM () {
+
+FILE=""
+OPT=""
+
+while true; do
+pkglist=""
+pkg=""
+MA=""
+MO=""
+
+#If there is only one file, then select it. Otherwise ask.
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+	then dialog --title "Cam and model" --yesno "All files selected? (or none)" 0 0
+		case $? in
+			0) MARKING=on ;;
+			1) MARKING=off;;
+		esac
+	else MARKING=on
+fi
+
+#list files
+for pkg in $(cat $HOME/tmp/add_exif/.list)
+	do
+FILE=$(echo "$DIR"/script.`echo "$pkg"|sed 's/\./ /g'|awk '{print $1}'`.out)
+#echo $FILE
+if [ -e "$FILE" ]
+	then if [ `grep 'Exif.Image.Make' "$FILE"|wc -l` = "1" ]
+	       then MA=`grep 'Exif.Image.Make' "$FILE"|sed 's/add//g ; s/set//g'|sed 's/exiv2\ \-M\"\ Exif\.Image\.Make//g ; s/\"//g ; s/modify//g'|rev|awk '{print $2 " " $3}'|rev|awk '{$1=$1};1'`
+	       else MA="~"
+	     fi
+	     if [ `grep 'Exif.Image.Model' "$FILE"|wc -l` = "1" ]
+	       then MO=`grep 'Exif.Image.Model' "$FILE"|sed 's/add//g ; s/set//g'|sed 's/exiv2\ \-M\"\ Exif\.Image\.Model//g ; s/\"//g ; s/modify//g'|rev|awk '{print $2 " " $3}'|rev|awk '{$1=$1};1'`
+	       else MO="~"
+	     fi
+	else echo "no existing script file in dir."
+	     MA="~"
+	     MO="~"
+fi
+
+
+if [ "$MA" = "~" -a "$MO" = "~" ]
+	then OPT="~"
+	else OPT=`echo $MA $MO|sed 's/\ /_/g'`
+fi
+pkglist="$pkglist $pkg "$OPT" "$MARKING" "
+done
+
+if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
+  then AMOUNT=$(grep Exif.Image.Model "$DIR"/script.*|wc -l)
+	 if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
+	 EXTRA="$AMOUNT of these chosen files allready has a Camera set."
+fi
+
+rm -rf "$HOME"/tmp/add_exif/.choise
+
+echo bah
+CHOISE=$(/usr/bin/dialog --checklist "CAM MODEL" 0 0 0 $pkglist --output-fd 1 )
+
+if [ -z "$CHOISE" ]
+	then break 0
+fi
+
+for B in $CHOISE
+do echo "$B" 2>&1 >>"$HOME"/tmp/add_exif/.choise
+done
+
+#done
+
+ADDCAMERA () {
+MA='~'
+MO='~'
+
+if [ ! -e "$HOME"/.add_exif.config/cameras ]
+	then SHOW='Ex. Nikon'
+	else SHOW=`cat "$HOME"/.add_exif.config/cameras|cut -d'?' -f1`
+	     SHOW="Added allready:
+$SHOW"
+fi
+
+MA=$(dialog --title "Camera maker" --inputbox "Write the camera MANUFACTURER
+
+$SHOW
+
+" 0 0 --output-fd 1)
+
+MO=$(dialog --title "Camera model" --inputbox "Write the camera MODEL
+
+EX. FM2a
+" 0 0 --output-fd 1)
+
+if [ "$MO" != '~' -a "$MA" != '~' ]
+	then echo "$MA?$MO" >> "$HOME"/.add_exif.config/cameras
+	     echo "$MA?$MO" > $HOME/tmp/add_exif/cam
+fi
+
+if [ "$MA" != '~' -a "$MO" = '~' ]
+	then echo "$MA?" >> "$HOME"/.add_exif.config/cameras
+	     echo "$MA" > $HOME/tmp/add_exif/cam
+fi
+}
+
+LISTCAMERAS () {
+CAMLIST="$HOME/.add_exif.config/cameras"
+pkg=""
+MAKER=""
+MODEL=""
+MO='~'
+MA='~'
+for pkg in $(cut -d'?' -f1 "$HOME"/.add_exif.config/cameras|sort|uniq)
+	do MAKER="$MAKER $pkg -"
+done
+MA=$(/usr/bin/dialog --stdout --title "Manufacturer" --menu "Camera MANUFACTURER:" 0 0 0 $MAKER --output-fd 1)
+
+if [ ! -z "$MA" ]
+  then pkg=""
+	for pkg in $(grep "$MA" "$HOME"/.add_exif.config/cameras|cut -d'?' -f2|sort|sed 's/ /_/g')
+		do MODEL="$MODEL $pkg -"
+	done
+
+	echo "/usr/bin/dialog --stdout --title Model --menu 'Camera MODEL:' 0 0 0 $MODEL --output-fd 1"
+#	read
+	MO=$(/usr/bin/dialog --stdout --title "Model" --menu "Camera MODEL:" 0 0 0 $MODEL --output-fd 1)
+	if [ -z "$MO" ]
+		then dialog --title "No camera model" --yesno "Manufacturer selected but no model.
+Add a new model to the library and add it to your files?" 0 0
+		     case $? in
+		     	0)return 1;;
+			1)echo 'no...';;
+		     esac
+		else echo "$MA?$MO" > $HOME/tmp/add_exif/cam
+	fi
+  else return 1 
 fi
 
 }
 
-#Deprecated
-GPSDATAOLD1 () {
+APPLY () {
 
-#bort med ev. gammnal fil.
-rm -rf /$HOME/tmp/add_exif/.gps
+MAKE=$(cut -d'?' -f1 $HOME/tmp/add_exif/cam)
+MODEL=$(cut -d'?' -f2 $HOME/tmp/add_exif/cam)
+APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 
-while true; do
+dialog --title "Correct or not" --yesno "
+Make:  $MAKE
+Model: $MODEL
+" 0 0 --output-fd 1
+ANS=$?
 
-pkglist=""
-for pkg in $(cat $HOME/tmp/add_exif/.list); do
-	FULLNAME=$(basename "$pkg")
-	FILENAME="${FULLNAME%.*}"
-	if [ `grep 'GPSInfo' "$DIR"/script.$FILENAME.out|wc -l` -ge 1 ]
-		then OPT='GPS'
-		else OPT='~'
-	fi
-	pkglist="$pkglist $pkg $OPT off "
-done
+for X in $(cat $HOME/tmp/add_exif/.choise)
+do FULLNAME=$(basename "$X")
+   FILENAME="${FULLNAME%.*}"
 
-choise=$(/usr/bin/dialog --checklist "GPSDATA:
-
-Chose one or more files FOR EACH coordinates
-
-This Menu will return!
-
-!!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
-
-dialog --title "List of files" --inputbox "Write your GPS tag using the following format:
-$choise
-
-60 10 11.5N 024 57 06.4E or 48°51'29.60\"N 2°17'36.90\"E
-Must be, degrees, minutes AND seconds!" 0 0 " " 2>$HOME/tmp/add_exif/.gps
-
-#format some coordinates to fit accoordingly:
-sed -i s/\'/\ /g $HOME/tmp/add_exif/.gps ; sed -i 's/\"//g ; s/°/ /g' $HOME/tmp/add_exif/.gps
-
-
-# sed removed empty spaces in the beginning of the gps-string:
-OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
-
-if [ -z "$OUT" ]
-  then echo "NO..." ; OUT=NOGPS
-  else #echo "YES!";
-  case `echo "$OUT"|awk '{print $3}'|rev` in
-	N*|S*)
-		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
-		 G4=`echo "$OUT"|awk '{print $4}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G6=`echo "$OUT"|awk '{print $6}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
-		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
-		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
-
-#		echo "before $choise"
-		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
-		echo "$choise" > $HOME/tmp/add_exif/.gpslist
-
-		for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
-
-		FULLNAME=$(basename "$LIST")
-		FILENAME="${FULLNAME%.*}"
-		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
-		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
-		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
-		   echo "$FILENAME ..."
-                   echo " 
-# GPS Data:"  >> "$DIR"/script.$FILENAME.out
-		   sed --in-place '/Exif.GPSInfo/d' "$X"
-		   sed --in-place '/GPS\ Data:/d' "$X"
-		   sed --in-place '/GPS\ End./d' "$X"
-		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GWE\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $G1 $G2 $G3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-		   echo "# GPS End.
-   "  >> "$DIR"/script.$FILENAME.out
-		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+case $ANS in
+      0)if [ "${#MAKE}" -gt "1" ]
+		then sed --in-place '/Exif.Image.Make/d' "$DIR"/script.$FILENAME.out
+		     MAKE=`echo $MAKE|sed 's/_/ /g'`
+		     echo "exiv2 -M\"set Exif.Image.Make $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
 		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
-		fi
-   		done ;;
-	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
+		     fi
+		else echo else ; read BAH
+	fi
+	if [ "${#MODEL}" -gt "1" -a "$MODEL" != " " ]
+	        then sed --in-place '/Exif.Image.Model/d' "$DIR"/script.$FILENAME.out
+		     MODEL=`echo $MODEL|sed 's/_/ /g'`
+		     echo "exiv2 -M\"set Exif.Image.Model $MODEL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		     fi
+		else echo else ; read BAH
+	fi;;
+ 1) echo MEH
+#    read BAH ;;
 esac
-fi
-#TODO
-#- konvertera googles decimal-coordinater till "vanliga" finns info här:
-#  https://gis.stackexchange.com/questions/62103/how-do-you-convert-to-degrees-and-minutes-from-8-9-digit-lat-lon-dms-code
-#- If bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
-dialog --title "Coordinates" --defaultyes --yesno "Add more coordinates?" 0 0
-if [ $? = 1 ]
- then break
- else echo "om igen..." 
-fi
-
-#End of menu-loop:
 done
-
-if [ $? = 2 ]
-  then exit 0
-fi 
-
 }
 
-
-
-
-#Deprecated
-GPSDATAOLD2 () {
-
-rm -rf /$HOME/tmp/add_exif/.gps
-
-while true; do
-
-
-pkglist=""
-for pkg in $(cat $HOME/tmp/add_exif/.list); do
-	FULLNAME=$(basename "$pkg")
-	FILENAME="${FULLNAME%.*}"
-	if [ `grep 'GPSInfo' "$DIR"/script.$FILENAME.out|wc -l` -ge 1 ]
-		then OPT='GPS'
-		else OPT='~'
-	fi
-	pkglist="$pkglist $pkg $OPT off "
-done
-
-
-
-
-choise=$(/usr/bin/dialog --checklist "GPSDATA:
-
-Chose one or more files FOR EACH coordinates
-
-This Menu will return!
-
-!!! Any existing gps data will be removed !!!" 0 0 0 $pkglist --output-fd 1) || break
-
-dialog --title "List of files" --inputbox "Write your GPS tag using the following format:
-$choise
-
-N 64 32 5.3, E 12 24 3.6
-Must be, degrees, minutes AND seconds!
-
-GPS format converter can be found on:
-http://www.gpscoordinates.eu/convert-gps-coordinates.php" 0 0 " " 2>$HOME/tmp/add_exif/.gps
-
-
-# sed removed empty spaces in the beginning of the gps-string:
-OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
-
-if [ -z "$OUT" ]
-  then echo "NO..." ; OUT=NOGPS
-  else echo "YES!";
-  case "$OUT" in
-	N*|S*)
-                        GPS1=`echo "$OUT" | awk '{print $1}'`
-                        GPS2=`echo "$OUT" | awk '{print $2}'`
-                        if [ "$GPS2" = `echo "$GPS2" | sed 's/\.//g'` ]
-                          then BY1=1
-                          else BY1=10
-                        fi
-
-                        GPS3=`echo "$OUT" | awk '{print $3}'`
-                        if [ "$GPS3" = `echo "$GPS3" | sed 's/\.//g'` ]
-                          then BY2=1
-                          else BY2=10
-                        fi
-
-                        GPS4=`echo "$OUT" | awk '{print $4}' | sed 's/,//g'`
-                        if [ "$GPS4" = `echo "$GPS4" | sed 's/\.//g'` ]
-                          then BY3=1
-                          else BY3=10
-                               GPS4=`echo $GPS4 | sed 's/\.//g'`
-                        fi
-
-                        GPS5=`echo "$OUT" | awk '{print $5}'`
-
-                        GPS6=`echo "$OUT" | awk '{print $6}'`
-                        if [ "$GPS6" = `echo "$GPS6" | sed 's/\.//g'` ]
-                          then BY4=1
-                          else BY4=10
-                        fi
-
-                        GPS7=`echo "$OUT" | awk '{print $7}'`
-                        if [ "$GPS7" = `echo "$GPS7" | sed 's/\.//g'` ]
-                          then BY5=1
-                          else BY5=10
-                        fi
-
-                        GPS8=`echo "$OUT" | awk '{print $8}'`
-                        if [ "$GPS8" = `echo "$GPS8" | sed 's/\.//g'` ]
-                          then BY6=1
-                          else BY6=10
-                               GPS8=`echo $GPS8 | sed 's/\.//g'`
-                        fi
-		echo "before $choise"
-		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
-		echo "$choise" > $HOME/tmp/add_exif/.gpslist
-		for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
-		FULLNAME=$(basename "$LIST")
-		FILENAME="${FULLNAME%.*}"
-#DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
-		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
-		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
-		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
-                   echo " 
-# GPS Data:"  >> "$DIR"/script.$FILENAME.out
-		   sed --in-place '/Exif.GPSInfo/d' "$X"
-		   sed --in-place '/GPS\ Data:/d' "$X"
-		   sed --in-place '/GPS\ End./d' "$X"
-		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GPS1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"del Exif.GPSInfo.GPSLongitudeRef\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"add Exif.GPSInfo.GPSLongitudeRef $GPS5\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLatitude $GPS2/$BY1 $GPS3/$BY2 $GPS4/$BY3\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-                   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $GPS6/$BY4 $GPS7/$BY5 $GPS8/$BY6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-		   echo "# GPS End.
-   "  >> "$DIR"/script.$FILENAME.out
-		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
-			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
-		fi
-		done;;
-	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
-  esac
+if [ -e "$HOME"/.add_exif.config/cameras ] 
+	then LISTCAMERAS || ADDCAMERA
+	     APPLY
+	else ADDCAMERA
+	     APPLY
 fi
-
-#TODO
-#if bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
-dialog --title "Coordinates" --defaultno --yesno "Add more coordinates?" 0 0
-if [ $? = 1 ]
- then break
- else echo "om igen..." 
-fi
-
-#End of menu-loop:
 done
-
-if [ $? = 2 ]
-  then exit 0
-fi 
 }
 
 
@@ -1281,11 +1464,13 @@ if [ -z "$OUT" ]
 		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
 		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
 		   echo "$FILENAME ..."
+		   echo 1
 		   echo " 
 # GPS Data:"  >> "$DIR"/script.$FILENAME.out
 		   sed --in-place '/Exif.GPSInfo/d' "$X"
 		   sed --in-place '/GPS\ Data:/d' "$X"
 		   sed --in-place '/GPS\ End./d' "$X"
+		   echo 2
 		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
@@ -1295,6 +1480,7 @@ if [ -z "$OUT" ]
 		   echo "exiv2 -M\"set Exif.GPSInfo.GPSLongitude $G4 $G5 $G6\" modify     $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		   echo "# GPS End.
    "  >> "$DIR"/script.$FILENAME.out
+   		   echo 3
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
 		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
@@ -1303,6 +1489,7 @@ if [ -z "$OUT" ]
    [NS]\ ??\ ??\ ????\ [WE]\ ??\ ??\ ???)
 		GPS1=`echo "$OUT" | awk '{print $1}'`
 		GPS2=`echo "$OUT" | awk '{print $2}'`
+		echo 4a
 		if [ "$GPS2" = `echo "$GPS2" | sed 's/\.//g'` ]
 		  then BY1=1
 		  else BY1=10
@@ -1313,14 +1500,14 @@ if [ -z "$OUT" ]
 		  then BY2=1
 		  else BY2=10
 		fi
-
+                echo 4b
 		GPS4=`echo "$OUT" | awk '{print $4}' | sed 's/,//g'`
 		if [ "$GPS4" = `echo "$GPS4" | sed 's/\.//g'` ]
 		  then BY3=1
 		  else BY3=10
 		       GPS4=`echo $GPS4 | sed 's/\.//g'`
 		fi
-
+                echo 4c
 		GPS5=`echo "$OUT" | awk '{print $5}'`
 
 		GPS6=`echo "$OUT" | awk '{print $6}'`
@@ -1328,20 +1515,20 @@ if [ -z "$OUT" ]
 		  then BY4=1
 		  else BY4=10
 		fi
-
+                echo 4d
 		GPS7=`echo "$OUT" | awk '{print $7}'`
 		if [ "$GPS7" = `echo "$GPS7" | sed 's/\.//g'` ]
 		  then BY5=1
 		  else BY5=10
 		fi
-
+                echo 4e
 		GPS8=`echo "$OUT" | awk '{print $8}'`
 		if [ "$GPS8" = `echo "$GPS8" | sed 's/\.//g'` ]
 		  then BY6=1
 		  else BY6=10
 		       GPS8=`echo $GPS8 | sed 's/\.//g'`
 		fi
-	echo "before $choise"
+	echo 5
 	choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 	echo "$choise" > $HOME/tmp/add_exif/.gpslist
 	for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
@@ -1369,20 +1556,24 @@ if [ -z "$OUT" ]
 	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
+        echo 6
    done
    ;;
-	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;
-esac
+	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;  
+  esac
 fi
+
+#read BAH
 #TODO
 #- konvertera googles decimal-coordinater till "vanliga" finns info här:
 #  https://gis.stackexchange.com/questions/62103/how-do-you-convert-to-degrees-and-minutes-from-8-9-digit-lat-lon-dms-code
 #- If bara en bild, eller alla är taggade = nej, annars ja! (nu är det default = nej)
-dialog --title "Coordinates" --defaultyes --yesno "Add more coordinates?" 0 0
-if [ $? = 1 ]
- then break
- else echo "om igen..." 
-fi
+
+#dialog --title "Coordinates" --defaultyes --yesno "Add more coordinates?" 0 0
+#if [ $? = 1 ]
+# then break
+# else echo "om igen..." 
+#fi
 
 #End of menu-loop:
 done
@@ -1406,9 +1597,11 @@ then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
      done
 else
  dialog --title "One ISO-setting for all?" --defaultno --yesno "Is this about more than one ISO?" 7 45
+# clear
 
  if [ $? = 1 ]
- then echo ""
+ then clear 
+     echo ""
      echo "------------------------[ ALL FILES ]---------------------"
      echo "ISO -FOR ALL- (if no ISO, set n here)"
      echo ""
@@ -1422,6 +1615,7 @@ else
           read PUSH1
           echo 'to: (ex: 200)'
           read PUSH2
+	  if [ $PUSH1 -eq $PUSH2 ]; then break ; fi
 	  APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
           if [ "$PUSH1" -gt "$PUSH2" ]
             then sed --in-place '/pulled/d' "$DIR"/script.$FILENAME.out
@@ -1433,7 +1627,7 @@ else
 	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 	fi
-          echo 'Push' >> $HOME/tmp/add_exif/added
+#          echo 'Push' >> $HOME/tmp/add_exif/added
           OUT="$PUSH2"
           ;;
      esac
@@ -1455,7 +1649,8 @@ else
      fi
 
 
- else echo "-----------------------[ SEVERAL ISOs ]-------------------"
+ else clear
+      echo "-----------------------[ SEVERAL ISOs ]-------------------"
      for X in $(cat $HOME/tmp/add_exif/.list);
       do
        FULLNAME=$(basename "$X")
@@ -1467,7 +1662,7 @@ else
      echo "Pushed or pulled? ex. N or no ---"
      read PUSH
      case "$PUSH" in
-       n|N|Nej|No|NO|no) echo "Set ISO or [Enter] to use same as last: `cat $HOME/tmp/add_exif/.exifisohistory`"
+       n|N|Nej|No|NO|no) echo "Set ISO or [Enter] to use same as last: `cat $HOME/tmp/add_exif/.exifisohistory 2>/dev/null`"
           read OUT
 	  if [ -z $OUT ]
             then OUT=`cat $HOME/tmp/add_exif/.exifisohistory`
@@ -1664,7 +1859,17 @@ GIMPVERSION=`gimp --version|awk '{print $6}' 2>/dev/null`
 fi
 }
 
-CAMERA () {
+
+
+
+
+
+
+
+
+
+#deprecated
+CAMERAOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
        sed --in-place '/Exif.Image.Model/d' "$X"
@@ -1700,6 +1905,19 @@ else
              echo "Bronica Model? ex EC-TL"
 	     read TYPE
 	     OUT="Zenza Bronica";;
+             holga|Holga|HOLGA)OUT=Holga
+	     echo "Holga model? ex CFN"
+             read TYPE
+             case "$TYPE" in
+               GCFN|gcfn|Gcfn)TYPE="120 GCFN";;
+               CFN|cfn|Cfn)TYPE="120 CFN";;
+               GFN|gfn|Gfn)TYPE="120 GFN";;
+               WPC|wpc|Wpc)TYPE="WPC120";;
+               120gtlr|gtlr|GTLR)TYPE="120GTLR";;
+               tlr|120tlr|TLR)TYPE="120TLR";;
+               120s|"120 S"|"120 s")TYPE="120S";;
+               120n|"120 N"|"120 n")TYPE="120N";;
+             esac;;
         canon|Canon|CANON)
              echo "Canon Model? ex A-1"
              read TYPE
@@ -1802,7 +2020,7 @@ This is only to keep track of which number in a
 sequence a sheet or roll has.
 
           $FULLNAME
-" 0 0 "$ROLL" --output-fd 1)
+" 0 0 "" --output-fd 1)
 fi
 
 if [ "$ROLL" = "N" ]
@@ -1889,11 +2107,11 @@ if [ -z "$OUT" ]
 		done
 fi
 
-dialog --title "Comments" --defaultno --yesno "Add more comments?" 0 0
-	if [ $? = 1 ]
-	 then break
-	 else echo "om igen..." 
-	fi
+#dialog --title "Comments" --defaultno --yesno "Add more comments?" 0 0
+#	if [ $? = 1 ]
+#	 then break
+#	 else echo "om igen..." 
+#	fi
 
 done
 
@@ -2074,7 +2292,7 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
         "FOMA Fomapan Classic 100" "" \
         "FOMA Fomapan Creative 200" "" \
         "FOMA Fomapan Action 400" "" \
-        "FOMA Fomapan Retropan 320" "" \
+        "FOMA Retropan 320" "" \
         "FOMA Fomapan R 100" "" \
 2> $HOME/tmp/add_exif/.film ;;
  'AgfaPhoto')dialog --title "AgfaPhoto"  --menu "Options:" 20 40 60 \
@@ -2262,6 +2480,7 @@ OUT=`cat $HOME/tmp/add_exif/.film | sed 's/\%//g'`
  fi
 #ead BAH
 }
+
 
 
 HELP () {
@@ -2599,6 +2818,9 @@ esac
 
 #aperture, speed, date, time, program, lens, + iso, photographer, software, camera, film
 #filnamnsproblem, om fil med samma namn, men olika extension ska ha samma data.
+
+
+
 
 
 
