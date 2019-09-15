@@ -519,14 +519,16 @@ $FILENAME
 	else OUT="$SP"
 fi
 
-
-if [ $ALL = N -a $ASK = N ]
-	then $(dialog --title "Aperture" --defaultno --yesno "Same setting for all?" 0 0 --output-fd 1)
-		if [ $? = 0 ]
-		  then ALL=Y
-		       ASK=Y
-		  else ASK=Y
-		fi
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+	then if [ $ALL = N -a $ASK = N ]
+		then $(dialog --title "Aperture" --defaultno --yesno "Same setting for all?" 0 0 --output-fd 1)
+			if [ $? = 0 ]
+		  		then ALL=Y
+		       		     ASK=Y
+		  		else ASK=Y
+			fi
+	     fi
+	else ALL=Y
 fi
 
 echo "$OUT" > "$HOME"/tmp/add_exif/.aperture
@@ -634,16 +636,12 @@ do
          fi
          echo "$OUT" > $HOME/tmp/add_exif/.exiflenshistory
 
-
-#         read OUT
 	  case "$OUT" in
 		X|x);;
 		*) sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out
 		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		   echo "exiv2 -M\"del Exif.Photo.FocalLength Rational\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
            	   echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $OUT/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-#	   	   echo 'FocalLength' >> $HOME/tmp/add_exif/added
-#           	   echo "$DIR"/script.$FILENAME.out  >> $HOME/tmp/add_exif/.exiv_scripts."$DELDATE";;
 		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
 		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
@@ -651,239 +649,6 @@ do
 	  esac
 done
 fi
-}
-
-ADDCAM () {
-
-for X in $(cat $HOME/tmp/add_exif/.list);
-do
-FULLNAME=$(basename "$X")
-FILENAME="${FULLNAME%.*}"
-
-CAMMODEL=""
-MAKER=""
-pkg=""
-pkglist=""
-CAMUSED=""
-MAKERVALUE=""
-F1=""
-F2=""
-F3=""
-LM1=""
-LM2=""
-LM3=""
-
-if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
-	then dialog --title "Cam and model" --yesno "All files selected? (or none)" 0 0
-		case $? in
-			0) MARKING=on ;;
-			1) MARKING=off;;
-		esac
-	else MARKING=1
-fi
-
-#list files
-for pkg in $(cat $HOME/tmp/add_exif/.list)
-	do
-	   a123=$(echo "$DIR"/script.`echo "$pkg"|sed 's/\./ /g'|awk '{print $1}'`.out)
-	   if [ -e "$a123" ]
-		then OPT=$(grep 'Exif.Image.Model' "$a123"|sed 's/\// /g ; s/\"//g'|awk '{print $4}'|sed 's/\ /_/g')
-		     if [ ${#OPT} -le 1 -o "$OPT" = "modify" ]
-		       then OPT='~'
-		       else if [ `grep 'add Exif.Image.Make' "$a123"|wc -l` -ge 1 -o "$OPT" != "modify" ]
-         			then OPTM=$(grep 'Exif.Image.Make' "$a123"|sed 's/\// /g ; s/\"//g'|awk '{print $4}')
-				     OPT=`echo $OPTM $OPT|sed 's/\ /_/g'`
-                            fi
-		     fi
-		else OPT='~'
-	   fi
-	   pkglist="$pkglist $pkg "$OPT" "$MARKING" "
-done
-
-if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
-  then AMOUNT=$(grep Exif.Image.Model "$DIR"/script.*|wc -l)
-	 if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
-	 EXTRA="$AMOUNT of these chosen files allready has a Camera set."
-fi
-
-##########################
-#exit 0
-##########################
-
-choise=$(/usr/bin/dialog --checklist "CAM MODEL:
-
-Chose ALL or single files for EACH camera model
-
-$EXTRA
-
-This Menu will return!
-" 0 0 0 $pkglist --output-fd 1)
-
-if [ -z $choise ]
- then break
-fi
-
-#Filtrera bort automatiskt skräp:
-#choise=`echo $choise | tr " " "\n"`
-#version 2: Ta även bort \ och " som kommer när det är specialtecken i filnamnet:
-choise=$(echo $choise | tr " " "\n"| sed 's/\"//g; s/\\//g')
-
-echo "$choise" > $HOME/tmp/add_exif/.camlist
-
-lenslist=""
- for pkg in $(cat $HOME/.add_exif.config/lenses)
-	do pkglist="$pkglist $pkg ~ "
-done
-
-
-
-MAKERVALUE=""
-MAKERMODEL=""
-MAKER=""
-if [ -e "$HOME"/.add_exif.config/lenses ];
-	then CAMLIST="$HOME/.add_exif.config/cameras"
-		MAKER=""
-		for pkg in $(grep "$MAKERVALUE" "$CAMLIST" | cut -d'?' -f1|sort|uniq)
-			do MAKER="$MAKER $pkg -"
-		done
-
-		MAKERMODEL=$(cut -d'?' -f2 "$CAMLIST")
-
-		#List all makers (first field in lenses-file)
-		MAKERVALUE=$(/usr/bin/dialog --stdout --title "Choose mount" --menu "Lens MOUNT:" 0 0 0 $MAKER --output-fd 1)
-		
-		if [ -n "$MAKERVALUE" ];
-		  then F1=`grep "$MAKERVALUE" "$CAMLIST" | cut -d'?' -f2 | sed 's/ /_/g'`
-#		       echo MAKERMODEL 1: "$MAKERMODEL"
-#		       read bah
-		       pkglist=""
-		       for pkg in $(echo "$F1"| cut -d'!' -f1)
-			  do pkglist="$pkglist $pkg -"
-		       done
-		       echo "F1"
-		       echo pkglist 2: "$pkglist"
-#		       read bah
-
-		       #list all lenses within that maker
-		       CAMUSED=$(/usr/bin/dialog --stdout --menu "Chose lens" 0 0 0 `echo $pkglist` --output-fd 1)
-		fi
-		
-
-#
-# Lägg till option för att backa i menyn!
-#
-# Lägg till option för "other" vilket blir i praktiken samma som "cancel"
-#
-
-
-	else dialog --title "mah" --msgbox "some text here..." 0 0
-fi
-
-
-
-if [ -z "$CAMUSED" ]; then
-
-	LM1=$(dialog --title "LENS MOUNT" --inputbox "Write your lens MOUNT:
-
-    ### CREATING A LENS TO THE LIBRARY! 1/3 ###
-
-This is NOT a tag, but used to catagorize for you to easier find the lens again.
-
-NIKON (as in Nikon mount)
-or
-LUBITEL (as in camera with unreplacable lenses)
-" 0 0 --output-fd 1) || break
-
-if [ -n "$LM1" ]
-	then LM2=$(dialog --title "Type your lens." --inputbox "Write your lens model as following to look proper:
-
-    ### CREATING A LENS TO THE LIBRARY! 2/3 ###
-
-Micro-NIKKOR 200mm 1:4
-or
-NIKKOR AF-S DX 18-140mm 1:3.5-5.6 G ED VR
-
-" 0 0 --output-fd 1) || break
-
-	if [ -n "$LM1" -a -n "$LM2" ];
-		then LM3=$(dialog --title "focal length" --inputbox "Type the focal length:
-
-    ### CREATING A LENS TO THE LIBRARY! 3/3 ###
-
-75
-or
-75mm
-
-" 0 0 --output-fd 1) || break
-	#Remove any 'mm' in the name as somebody might do it wrong...
-	LM3=`echo "$LM3" | sed 's/mm//g'`
-	fi
-fi
-
-
-
-
-fi
-
-if [ -n "$LM1" -a -n "$LM2" ]
-	then echo "$LM1"?"$LM2"!"$LM3" >> "$HOME"/.add_exif.config/lenses
-#	     break #för att hoppa ur och välja nya gluggen ur nygenererad glugg-lista
-		CAMUSED="$LM2"
-		
-fi
-
-		if [ -z "$CAMUSED" ]
-		   then echo "NO!"
-			#echo $CAMUSED
-		   else echo "YES!" #; CAMUSED=NOLENS
-
-		for LIST in $(cat $HOME/tmp/add_exif/.camlist); do
-		FULLNAME=$(basename "$LIST")
-		FILENAME="${FULLNAME%.*}"
-#DEKLARERAD		DIR=$(dirname "$LIST" | sed s/\'//g)
-		#Remove old data:
-
-		   sed --in-place '/Exif.Photo.LensModel/d' "$DIR"/script.$FILENAME.out 2>/dev/null
-		#Add new data:
-		   CAMUSED1=`echo $CAMUSED|sed 's/_/ /g'`
-		   sed --in-place '/Exif.Photo.LensModel/d' "$DIR"/script.$FILENAME.out
-		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-		   echo "exiv2 -M\"set Exif.Photo.LensModel $CAMUSED1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-		if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
-			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
-		fi
-
-		if [ -z "$LM3" ]
-			then F2=$(echo "$CAMUSED" | sed 's/_/ /g') # | cut -d'!' -f2 | sed -e 's/mm//g' -e 's/MM//g')
-			     F3=$(grep "$F2" $HOME/.add_exif.config/lenses |cut -d'!' -f2 | sed -e 's/mm//g' -e 's/MM//g' )
-			else F3="$LM3"
-		fi
-
-#if lens is not a zoom, then add the focal length to exif aswell.
-#		FOCAL=$(grep "$CAMUSED" $CAMLIST | cut -d'_' -f3) 
-#
-#Checking if F3 is actually something equivalent to a focal lenth (a number) which most likely is lower than 10000.
-
-		if [ -n "$F3" -a "$F3" -lt 10000 2>/dev/null ]
-		   then sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out #2>/dev/null
-			APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-			echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $F3/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-			if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
-			       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
-				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
-			fi
-		   else	if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
-			   then echo "FocalLength `echo $F3` NOT added to exif!
-- Probably there was no value in the Lenses configuration-file."
-			fi
-			sleep 1
-		fi
-
-done #;break
-fi #
-
-done #; break
 }
 
 
@@ -910,7 +675,7 @@ if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
 			0) MARKING=on ;;
 			1) MARKING=off;;
 		esac
-	else MARKING=1
+	else MARKING=on
 fi
 
 #list files
@@ -943,7 +708,7 @@ done
 if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
   then AMOUNT=$(grep Exif.Photo.LensModel "$DIR"/script.*|wc -l)
          if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
-         EXTRA="$AMOUNT of these chosen files allready has LENSMODEL data."
+         EXTRA="$AMOUNT of the files in dir has set LENSMODEL data."
 fi
 
 ##########################
@@ -959,10 +724,9 @@ Chose one or more files for EACH lens
 
 $EXTRA
 
-This Menu will return!
 " 0 0 0 $pkglist --output-fd 1)
 
-if [ -z $choise ]
+if [ -z "$choise" ]
  then break
 fi
 
@@ -986,7 +750,7 @@ MAKER=""
 if [ -e "$HOME"/.add_exif.config/lenses ];
 	then LENSLIST="$HOME/.add_exif.config/lenses"
 		MAKER=""
-		for pkg in $(grep "$MAKERVALUE" "$LENSLIST" | cut -d'?' -f1|sort|uniq)
+		for pkg in $(grep "$MAKERVALUE" "$LENSLIST" | cut -d'?' -f1|sort|uniq|sed 's/ /_/g')
 			do MAKER="$MAKER $pkg -"
 		done
 
@@ -996,7 +760,8 @@ if [ -e "$HOME"/.add_exif.config/lenses ];
 		MAKERVALUE=$(/usr/bin/dialog --stdout --title "Choose mount" --menu "Lens MOUNT:" 0 0 0 $MAKER --output-fd 1)
 		
 		if [ -n "$MAKERVALUE" ];
-		  then F1=`grep "$MAKERVALUE" "$LENSLIST" | cut -d'?' -f2 | sed 's/ /_/g'`
+		  then MAKERVALUE=`echo $MAKERVALUE|sed 's/_/ /g'`
+		       F1=`grep "$MAKERVALUE" "$LENSLIST" | cut -d'?' -f2|sed 's/ /_/g'`
 #		       echo MAKERMODEL 1: "$MAKERMODEL"
 #		       read bah
 		       pkglist=""
@@ -1019,7 +784,16 @@ if [ -e "$HOME"/.add_exif.config/lenses ];
 #
 
 
-	else dialog --title "mah" --msgbox "some text here..." 0 0
+	else dialog --title "No config file" --msgbox "There is no ready config with lenses
+So I create one!
+
+Follow the instructions further to create a lens.
+- Since lenses can be adapted between camera manufacturers, I hade this so that firstly
+  you set a parent directory using the lens mounts name, and then comes the actual lens name
+  And after the lens name comes a focallength spec. Since focal is not allways in the lens name.
+
+Example: 
+  Canon FD --> CANON LENS FD 24mm 1:2.8 --> 24mm" 0 0
 fi
 
 
@@ -1116,11 +890,24 @@ fi
 			       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 				    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 			fi
-		   else	if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
-                           then echo "FocalLength `echo $F3` NOT added to exif!
-- Probably there was no value in the Lenses configuration-file."
+		   else FOCALL=$(dialog --title "focal length" --inputbox "There is no focal length for that setting, so please type the focal...
+
+$FILENAME
+
+ex. 75 or 75mm
+" 0 0 "$FOCALL" --output-fd 1)
+			if [ ! -z "$FOCALL" ]
+			  then FOCALL=`echo $FOCALL|sed 's/mm//g'`
+			       if [ "$FOCALL" -lt 10000 2>/dev/null ]
+				 then sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out
+				      echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $FOCALL/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+				 else fail ; read
+			       fi
+		   	  else  if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
+                           		then echo "FocalLength `echo $F3` NOT added to exif!"
+				fi
+		   		sleep 1
 			fi
-		   	sleep 1
 		fi
 
 
@@ -1155,7 +942,7 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 #Loop to return to menu after being done with the first lens.
 
 	if [ `cat $HOME/tmp/add_exif/.list|wc -l` != `cat $HOME/tmp/add_exif/.lenslist|wc -l` ]
-		then dialog --title "Lenses" --defaultno --yesno "Add more lenses?" 0 0
+		then dialog --title "Lenses" --yesno "Add lenses?" 0 0
 		if [ $? = 0 ]
 		   then ADDLENS
 		   else break
@@ -1596,7 +1383,12 @@ then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
        sed --in-place '/Exif.Photo.ISOSpeedRatings/d' "$X"
      done
 else
- dialog --title "One ISO-setting for all?" --defaultno --yesno "Is this about more than one ISO?" 7 45
+
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt 1 ]
+	then dialog --title "One ISO-setting for all?" --defaultno --yesno "Is this about more than one ISO?" 0 0
+	else echo "Just one file."
+fi
+
 # clear
 
  if [ $? = 1 ]
@@ -2008,19 +1800,24 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
    FULLNAME=$(basename "$X")
    FILENAME="${FULLNAME%.*}"
 
-if [ $ASK = N ]
+if [ $ASK = N -a `cat $HOME/tmp/add_exif/.list|wc -l` -gt 1 ]
 	then ASK=Y
 	     ALL=$(dialog --title "All or individual?" --menu "All frames or Individual?" 0 0 0 "All frames with same ROLL-nr" "" "Individual Roll-nr" "" --output-fd 1)
 fi
 
 if [ "$ALL" = "Individual Roll-nr" -o "$ROLL" = "N" ]
 	then if [ "$ROLL" = "N" ]; then ROLL=100 ; fi
+if [ `echo $FULLNAME|cut -d'-' -f1|cut -d'_' -f1` -ge 0 ]
+	then INPUT=`echo $FULLNAME|cut -d'-' -f1|cut -d'_' -f1`
+	else INPUT=""
+fi
+
 	     ROLL=$(dialog --title "Rollnumber" --inputbox "Example:
 This is only to keep track of which number in a
 sequence a sheet or roll has.
 
           $FULLNAME
-" 0 0 "" --output-fd 1)
+" 0 0 $INPUT --output-fd 1)
 fi
 
 if [ "$ROLL" = "N" ]
