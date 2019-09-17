@@ -114,6 +114,7 @@ rm -r $HOME/tmp/add_exif/.datetime
 fi
 }
 
+#deprecated
 DATEOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -379,6 +380,7 @@ done
 fi
 }
 
+#deprecated
 PROGRAMOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -608,6 +610,7 @@ done
 fi
 }
  
+#to be deprecated...
 LENS () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ] 
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
@@ -901,7 +904,7 @@ ex. 75 or 75mm
 			       if [ "$FOCALL" -lt 10000 2>/dev/null ]
 				 then sed --in-place '/Exif.Photo.FocalLength/d' "$DIR"/script.$FILENAME.out
 				      echo "exiv2 -M\"set Exif.Photo.FocalLength Rational $FOCALL/1\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-				 else fail ; read
+				 else echo fail ; read
 			       fi
 		   	  else  if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
                            		then echo "FocalLength `echo $F3` NOT added to exif!"
@@ -950,6 +953,462 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 	fi
 fi
 }
+
+
+
+FILM () {
+# remove old tag if remove action was used to start script.
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
+	then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+	       sed --in-place '/Film:/d' "$X"
+#	       sed --in-place '/Developer:/d' "$X"
+	     done
+	else ADDFILM
+
+#Loop to return to menu after being done with the first selected
+fi
+}
+
+
+
+ADDFILM () {
+
+FILE=""
+OPT=""
+
+while true; do
+pkglist=""
+pkg=""
+MA=""
+MO=""
+
+#If there is only one file, then select it. Otherwise ask.
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+	then dialog --title "Film" --yesno "All files selected? (or none)" 0 0
+		case $? in
+			0) MARKING=on ;;
+			1) MARKING=off;;
+		esac
+	else MARKING=on
+fi
+
+#list files
+for pkg in $(cat $HOME/tmp/add_exif/.list)
+	do
+FILE=$(echo "$DIR"/script.`echo "$pkg"|sed 's/\./ /g'|awk '{print $1}'`.out)
+#echo $FILE
+if [ -e "$FILE" ]
+	then if [ `grep 'Exif.Photo.UserComment Film:' "$FILE"|wc -l` = "1" ]
+	       then MA=`grep 'Exif.Photo.UserComment Film:' "$FILE"|sed 's/exiv2\ -M\"add\ Exif.Photo.UserComment\ Film://g'|cut -d'"' -f1|awk '{$1=$1};1'`
+	       else MA="~"
+	     fi
+#	     if [ `grep 'Exif.Photo.UserComment Developer:' "$FILE"|wc -l` = "1" ]
+#	       then MO=`grep 'Exif.Photo.UserComment Developer:' "$FILE"|sed 's/add//g'|sed 's/exiv2\ \-M\"\ Exif\.Photo\.UserComment\ Developer://g ; s/\"//g ; s/modify//g'|rev|awk '{print $2 " " $3}'|rev|awk '{$1=$1};1'`
+#	       else MO="~"
+#	     fi
+	else echo "no existing script file in dir."
+	     MA="~"
+	     MO="~"
+fi
+
+
+if [ "$MA" = "~" -a "$MO" = "~" ]
+	then OPT="~"
+	else OPT=`echo $MA $MO|sed 's/\ /_/g'`
+fi
+pkglist="$pkglist $pkg "$OPT" "$MARKING" "
+done
+
+if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
+  then AMOUNT=$(grep 'Exif.Photo.UserComment Film:' "$DIR"/script.*|wc -l)
+	 if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
+	 EXTRA="$AMOUNT of these chosen files allready has a Film set."
+fi
+
+rm -rf "$HOME"/tmp/add_exif/.choise
+
+echo bah
+CHOISE=$(/usr/bin/dialog --checklist "Film" 0 0 0 $pkglist --output-fd 1 )
+
+if [ -z "$CHOISE" ]
+	then break 0
+fi
+
+for B in $CHOISE
+do echo "$B" 2>&1 >>"$HOME"/tmp/add_exif/.choise
+done
+
+#done
+
+ADDFILM () {
+MA='~'
+MO='~'
+
+if [ ! -e "$HOME"/.add_exif.config/film ]
+	then SHOW='Ex. Ilford'
+	else SHOW=`cat "$HOME"/.add_exif.config/film|cut -d'?' -f1|sort|uniq`
+	     SHOW="Added allready:
+$SHOW
+
+Write one already existing
+OR a new manufacturer"
+fi
+
+MA=$(dialog --title "Film maker" --inputbox "Write the film MANUFACTURER
+
+$SHOW
+
+" 0 0 --output-fd 1)
+
+if [ ! -e "$HOME"/.add_exif.config/film ]
+	then SHOW='Ex. HP5+ 400'
+	else SHOW=`cat "$HOME"/.add_exif.config/film|cut -d'?' -f2`
+	     SHOW="Added allready:
+$SHOW"
+fi
+
+MO=$(dialog --title "Film model" --inputbox "Write the film TYPE
+
+$SHOW
+
+" 0 0 --output-fd 1)
+
+if [ "$MO" != '~' -a "$MA" != '~' ]
+	then echo "$MA?$MO" >> "$HOME"/.add_exif.config/film
+	     echo "$MA?$MO" > $HOME/tmp/add_exif/film
+fi
+
+if [ "$MA" != '~' -a "$MO" = '~' ]
+	then echo "$MA?" >> "$HOME"/.add_exif.config/film
+	     echo "$MA" > $HOME/tmp/add_exif/film
+fi
+}
+
+LISTFILMS () {
+LIST="$HOME/.add_exif.config/film"
+pkg=""
+MAKER=""
+MODEL=""
+MO='~'
+MA='~'
+for pkg in $(cut -d'?' -f1 "$HOME"/.add_exif.config/film|sort|uniq)
+	do MAKER="$MAKER $pkg -"
+done
+MA=$(/usr/bin/dialog --stdout --title "Manufacturer" --menu "Film MANUFACTURER:" 0 0 0 $MAKER --output-fd 1)
+
+if [ ! -z "$MA" ]
+  then pkg=""
+	for pkg in $(grep "$MA" "$HOME"/.add_exif.config/film|cut -d'?' -f2|sort|sed 's/ /_/g')
+		do MODEL="$MODEL $pkg -"
+	done
+
+	echo "/usr/bin/dialog --stdout --title Model --menu 'Film TYPE:' 0 0 0 $MODEL --output-fd 1"
+#	read
+	MO=$(/usr/bin/dialog --stdout --title "Model" --menu "Film TYPE:" 0 0 0 $MODEL --output-fd 1)
+	if [ -z "$MO" ]
+		then dialog --title "No film type" --yesno "Manufacturer selected but no type.
+Add a new type to the library and add it to your files?" 0 0
+		     case $? in
+			0)return 1;;
+			1)echo 'no...';;
+		     esac
+		else echo "$MA?$MO" > $HOME/tmp/add_exif/film
+	fi
+  else return 1 
+fi
+
+}
+
+APPLY () {
+
+MAKE=$(cut -d'?' -f1 $HOME/tmp/add_exif/film)
+MODEL=$(cut -d'?' -f2 $HOME/tmp/add_exif/film)
+APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+
+dialog --title "Correct or not" --yesno "
+Make: $MAKE
+Type: $MODEL
+" 0 0 --output-fd 1
+ANS=$?
+
+for X in $(cat $HOME/tmp/add_exif/.choise)
+do FULLNAME=$(basename "$X")
+   FILENAME="${FULLNAME%.*}"
+
+case $ANS in
+      0)if [ "${#MAKE}" -gt "2" -a "${#MODEL}" -gt "2" ]
+		then sed --in-place '/Exif.Photo.UserComment\ Film:/d' "$DIR"/script.$FILENAME.out
+		     MAKE=`echo $MAKE|sed 's/_/ /g'`
+#		     echo "exiv2 -M\"set Exif.Image.Make $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     echo "exiv2 -M\"add Exif.Photo.UserComment Film: $MAKE $MODEL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		     fi
+		else echo "else (1)"
+#		     ${#MAKE} is less than 2
+#		     ${#MODEL} is less than 2" ; read BAH
+	fi
+	if [ "${#MAKE}" -gt "1" -a "${#MODEL}" -lt "2" ]
+		then sed --in-place '/Exif.Photo.UserComment\ Film:/d' "$DIR"/script.$FILENAME.out
+		     MODEL=`echo $MODEL|sed 's/_/ /g'`
+		     echo "exiv2 -M\"set Exif.Image.Model $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     echo "exiv2 -M\"add Exif.Photo.UserComment Film: $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		     fi
+		else echo "else (2)"
+#		     ${#MAKE} is more than 1
+#		     ${#MODEL} is less than 2 " ; read BAH
+	fi;;
+ 1) echo MEH
+#    read BAH ;;
+esac
+done
+}
+
+if [ -e "$HOME"/.add_exif.config/film ] 
+	then LISTFILMS || ADDFILM
+	     APPLY
+	else ADDFILM
+	     APPLY
+fi
+done
+}
+
+
+
+DEVELOPMENT () {
+# remove old tag if remove action was used to start script.
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
+	then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+	       sed --in-place '/Developed:/d' "$X"
+#	       sed --in-place '/Developer:/d' "$X"
+	     done
+	else ADDDEV
+
+#Loop to return to menu after being done with the first selected
+fi
+}
+
+
+
+ADDDEV () {
+
+FILE=""
+OPT=""
+
+while true; do
+pkglist=""
+pkg=""
+MA=""
+MO=""
+
+#If there is only one file, then select it. Otherwise ask.
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+	then dialog --title "Developed" --yesno "All files selected? (or none)" 0 0
+		case $? in
+			0) MARKING=on ;;
+			1) MARKING=off;;
+		esac
+	else MARKING=on
+fi
+
+#list files
+for pkg in $(cat $HOME/tmp/add_exif/.list)
+	do
+FILE=$(echo "$DIR"/script.`echo "$pkg"|sed 's/\./ /g'|awk '{print $1}'`.out)
+#echo $FILE
+if [ -e "$FILE" ]
+	then if [ `grep 'Exif.Photo.UserComment Developed:' "$FILE"|wc -l` = "1" ]
+	       then MA=`grep 'Exif.Photo.UserComment Developed:' "$FILE"|sed 's/exiv2\ -M\"add\ Exif.Photo.UserComment\ Developed://g'|cut -d'"' -f1|awk '{$1=$1};1'`
+	       else MA="~"
+	     fi
+#	     if [ `grep 'Exif.Photo.UserComment Developer:' "$FILE"|wc -l` = "1" ]
+#	       then MO=`grep 'Exif.Photo.UserComment Developer:' "$FILE"|sed 's/add//g'|sed 's/exiv2\ \-M\"\ Exif\.Photo\.UserComment\ Developer://g ; s/\"//g ; s/modify//g'|rev|awk '{print $2 " " $3}'|rev|awk '{$1=$1};1'`
+#	       else MO="~"
+#	     fi
+	else echo "no existing script file in dir."
+	     MA="~"
+	     MO="~"
+fi
+
+
+if [ "$MA" = "~" -a "$MO" = "~" ]
+	then OPT="~"
+	else OPT=`echo $MA $MO|sed 's/\ /_/g'`
+fi
+pkglist="$pkglist $pkg "$OPT" "$MARKING" "
+done
+
+if [ `ls "$DIR"/script.*|wc -l` -ge 1 ]
+  then AMOUNT=$(grep 'Exif.Photo.UserComment Developed:' "$DIR"/script.*|wc -l)
+	 if [ "$AMOUNT" -eq `cat $HOME/tmp/add_exif/.list|wc -l` ]; then AMOUNT=ALL ; fi
+	 EXTRA="$AMOUNT of these chosen files allready has a chosen Development."
+fi
+
+rm -rf "$HOME"/tmp/add_exif/.choise
+
+echo bah
+CHOISE=$(/usr/bin/dialog --checklist "Development" 0 0 0 $pkglist --output-fd 1 )
+
+if [ -z "$CHOISE" ]
+	then break 0
+fi
+
+for B in $CHOISE
+do echo "$B" 2>&1 >>"$HOME"/tmp/add_exif/.choise
+done
+
+#done
+
+ADDDEV () {
+MA='~'
+MO='~'
+
+if [ ! -e "$HOME"/.add_exif.config/dev ]
+	then SHOW='Ex. Compard R09 One Shot'
+	else SHOW=`cat "$HOME"/.add_exif.config/dev|cut -d'?' -f1`
+	     SHOW="Added allready:
+$SHOW"
+fi
+
+MA=$(dialog --title "Dev maker" --inputbox "Write what dev you are using
+
+$SHOW
+
+" 0 0 --output-fd 1)
+
+if [ ! -e "$HOME"/.add_exif.config/dev ]
+	then SHOW='Ex. Continous agitation, 60 min'
+	else SHOW=`cat "$HOME"/.add_exif.config/dev|cut -d'?' -f2`
+	     SHOW="Added allready:
+$SHOW"
+fi
+
+MO=$(dialog --title "Dev" --inputbox "Write your development technique
+
+$SHOW
+
+" 0 0 --output-fd 1)
+
+if [ "$MO" != '~' -a "$MA" != '~' ]
+	then echo "$MA?$MO" >> "$HOME"/.add_exif.config/dev
+	     echo "$MA?$MO" > $HOME/tmp/add_exif/dev
+fi
+
+if [ "$MA" != '~' -a "$MO" = '~' ]
+	then echo "$MA?" >> "$HOME"/.add_exif.config/dev
+	     echo "$MA" > $HOME/tmp/add_exif/dev
+fi
+}
+
+LISTDEVS () {
+LIST="$HOME/.add_exif.config/dev"
+pkg=""
+MAKER=""
+MODEL=""
+MO='~'
+MA='~'
+for pkg in $(cut -d'?' -f1 "$HOME"/.add_exif.config/dev|sort|uniq|sed 's/ /_/g')
+	do MAKER="$MAKER $pkg -"
+done
+MA=$(/usr/bin/dialog --stdout --title "DEV" --menu "Developed:" 0 0 0 $MAKER --output-fd 1)
+
+#echo "\$MA = $MA"
+#read
+
+if [ ! -z "$MA" ]
+  then pkg=""
+  	MA=`echo $MA|sed 's/_/ /g'`
+#	for pkg in $(grep "$MA" "$HOME"/.add_exif.config/dev|sed 's/_/ /g'|cut -d'?' -f2|sort|sed 's/ /_/g')
+        for pkg in $(grep "$MA" "$HOME"/.add_exif.config/dev|cut -d'?' -f2 |sort|uniq|sed 's/ /_/g')
+		do MODEL="$MODEL $pkg -"
+	done
+
+	echo "$MODEL"
+
+	MO=$(/usr/bin/dialog --stdout --title "Technique" --menu "Developed:" 0 0 0 $MODEL --output-fd 1)
+#       echo "/usr/bin/dialog --stdout --title Model --menu Developed: 0 0 0 $MODEL --output-fd 1"
+# 	read
+	if [ -z "$MO" ]
+		then dialog --title "No dev technique" --yesno "Developer selected but no technique.
+Add a new technique to the library and add it to your files?" 0 0
+		     case $? in
+			0)return 1;;
+			1)echo 'no...';;
+		     esac
+		else echo "$MA?$MO" > $HOME/tmp/add_exif/dev
+	fi
+  else return 1 
+fi
+
+}
+
+APPLY () {
+
+MAKE=$(cut -d'?' -f1 $HOME/tmp/add_exif/dev)
+MODEL=$(cut -d'?' -f2 $HOME/tmp/add_exif/dev)
+APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+
+dialog --title "Correct or not" --yesno "
+
+Make: $MAKE
+Type: $MODEL
+" 10 60 --output-fd 1
+ANS=$?
+
+for X in $(cat $HOME/tmp/add_exif/.choise)
+do FULLNAME=$(basename "$X")
+   FILENAME="${FULLNAME%.*}"
+
+case $ANS in
+      0)if [ "${#MAKE}" -gt "2" -a "${#MODEL}" -gt "2" ]
+		then sed --in-place '/Exif.Photo.UserComment\ Developed:/d' "$DIR"/script.$FILENAME.out
+		     MAKE=`echo $MAKE|sed 's/_/ /g'`
+#		     echo "exiv2 -M\"set Exif.Image.Make $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     echo "exiv2 -M\"add Exif.Photo.UserComment Developed: $MAKE $MODEL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		     fi
+		else echo "else (1)"
+#		     ${#MAKE} is less than 2
+#		     ${#MODEL} is less than 2" ; read BAH
+	fi
+	if [ "${#MAKE}" -gt "1" -a "${#MODEL}" -lt "2" ]
+		then sed --in-place '/Exif.Photo.UserComment\ Developed:/d' "$DIR"/script.$FILENAME.out
+		     MODEL=`echo $MODEL|sed 's/_/ /g'`
+		     echo "exiv2 -M\"set Exif.Image.Model $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     echo "exiv2 -M\"add Exif.Photo.UserComment Developed: $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+		     fi
+		else echo "else (2)"
+#		     ${#MAKE} is more than 1
+#		     ${#MODEL} is less than 2 " ; read BAH
+	fi;;
+ 1) echo MEH
+#    read BAH ;;
+esac
+done
+}
+
+if [ -e "$HOME"/.add_exif.config/dev ] 
+	then LISTDEVS || ADDDEV
+	     APPLY
+	else ADDDEV
+	     APPLY
+fi
+done
+}
+
+
+
+
+
 
 
 
@@ -1652,14 +2111,6 @@ fi
 }
 
 
-
-
-
-
-
-
-
-
 #deprecated
 CAMERAOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
@@ -1957,7 +2408,7 @@ fi
 # sed -i "1icase $1 in *.NEF|*.pp3|*.out|*.bz2|*.xcf)exit 0 ;; esac" file
 }
 
-FILM () {
+FILMOLD () {
 
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then MD5SUM="/usr/bin/md5sum"
@@ -2311,7 +2762,7 @@ Any questions regarding functionality, bugs, whatever - please mail me on johan.
 
 # Start script with 'add_exif.sh RUNGPS' in order to only do GPS (fastmode.
 RUNGPS () {
-TOP='Adding images to $HOME/tmp/add_exif/.list'
+TOP='Selecting and listing images in your dir'
 TIF=$(ls -l *.tif | wc -l)
 
 	if [ $TIF = 0 ]
@@ -2319,7 +2770,13 @@ TIF=$(ls -l *.tif | wc -l)
 	 else CMD='/bin/ls *.tif'
 	fi
 
-	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to add files to $HOME/tmp/add_exif/.list" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
+	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to select files
+Examples:
+
+*.tif (default)
+DSC_{0034..0048}.tif (adding all DSC_ -files between nr 0034 and 0048
+
+" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
 	   if [ $? = 1 ]
 	     then echo "Pressed 'Cancel'"
 		  exit 0
@@ -2369,7 +2826,7 @@ if [ $? = 1 ]
         LENS " " off \
         ISO " " off \
         FILM " " off \
-	DEVEL " " off \
+	DEVELOPMENT " " off \
 	ROLLNR " " off \
         PHOTOGRAPHER " " off \
         CAMERA " " off \
@@ -2395,22 +2852,27 @@ if [ $? = 1 ]
 fi
 
 
-
-
-
 rm -rf "$HOME"/tmp/add_exif/.remove.* >/dev/null
 }
 
 RUN () {
 	rm -rf "$HOME"/tmp/add_exif/.remove 2>/dev/null
-TOP='Adding images to $HOME/tmp/add_exif/.list'
+TOP='Selecting and listing images in your dir'
 TIF=$(ls -l *.tif | wc -l)
 
 	   if [ "$TIF" = 0 ]
 	    then CMD='/bin/ls *.jpg'
 	    else CMD='/bin/ls *.tif'
 	   fi
-	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to add files to $HOME/tmp/add_exif/.list" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
+	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to select files
+
+examples...
+
+*.tif (default)
+DSC_{0034..0048}.tif
+{0045_delta400.tif,0051_tmax100.jpg}
+
+" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
 	   if [ "$?" = 1 ]
 	     then echo "Pressed 'Cancel'"
 		  exit 0
@@ -2445,11 +2907,13 @@ fi
 	fi
 
 EXT () {
- 	dialog --title "File extensions" --inputbox "The following extensions were found in this folder. Be aware that choosen extensions are case sensitive!
+ 	dialog --title "File extensions" --inputbox "The following extensions were found in this folder.
+	Be aware that choosen extensions are case sensitive.
 
-Examples: {jpg,JPG,tif,TIF} or {jpg,jpeg}
+	Examples: {jpg,JPG,tif,TIF} or {jpg,jpeg}
 
-I have found that certain raw-files like NEF will currupt if applied on!
+	I have found that raw-files like NEF might
+	be currupted if exiv2 writes exif to them.
 
 `ls *.$APPLYON|sed 's/.*\(...\)/\1/'|sort|uniq`" 0 0 "$APPLYON" --output-fd 1 >"$HOME"/.add_exif.config/apply_on
 }
@@ -2473,27 +2937,52 @@ should be syntax like: {jpg,TIF}"
 	done
 	fi
 
-## APPLY ON ##
+## Grab previous chosen options ##
+
+grep DATE "$HOME"/.add_exif.config/menu && date=on || date=off
+grep PROGRAM "$HOME"/.add_exif.config/menu && program=on || program=off
+grep APERTURE "$HOME"/.add_exif.config/menu && aperture=on || aperture=off
+grep SPEED "$HOME"/.add_exif.config/menu && speed=on || speed=off
+grep LENS "$HOME"/.add_exif.config/menu && lens=on || lens=off
+grep LENSMODEL "$HOME"/.add_exif.config/menu && lensmodel=on || lensmodel=off
+grep ISO "$HOME"/.add_exif.config/menu && iso=on || iso=off
+grep FILM "$HOME"/.add_exif.config/menu && film=on || film=off
+grep DEVELOPMENT "$HOME"/.add_exif.config/menu && development=on || development=off
+grep ROLLNR "$HOME"/.add_exif.config/menu && rollnr=on || rollnr=off
+grep CAMERA "$HOME"/.add_exif.config/menu && camera=on || camera=off
+grep SOFTWARE "$HOME"/.add_exif.config/menu && software=on || software=off
+grep PHOTOGRAPHER "$HOME"/.add_exif.config/menu && photographer=on || photographer=off
+grep COMMENT "$HOME"/.add_exif.config/menu && comment=on || comment=off
+grep GPSDATA "$HOME"/.add_exif.config/menu && gpsdata=on || gpsdata=off
+
+
+#Removed. Only adding focal length, which is added alongside LENSMODEL
+#        LENS "Focallength only" $lens \
 
 
    	   rm -rf "$HOME"/tmp/add_exif/.dialogout 
            dialog --separate-output --checklist "Choose exifdata:" 0 0 0 \
-        DATE " " on \
-        PROGRAM "PSAM" on \
-        APERTURE " " on \
-        SPEED " " on \
-        LENS "Focallength only" off \
-	LENSMODEL " " on \
-        ISO " " on \
-        FILM " " on \
-	DEVEL " " on \
-	ROLLNR " " on \
-        CAMERA " " on \
-        SOFTWARE " " on \
-        PHOTOGRAPHER " " on \
-	COMMENT " " on \
-	GPSDATA " " on \
+        DATE " " $date \
+        PROGRAM "PSAM" $program \
+        APERTURE " " $aperture \
+        SPEED " " $speed \
+	LENSMODEL " " $lensmodel \
+        ISO " " $iso \
+        FILM " " $film \
+	DEVELOPMENT " " $development \
+	ROLLNR " " $rollnr \
+        CAMERA " " $camera \
+        SOFTWARE " " $software \
+        PHOTOGRAPHER " " $photographer \
+	COMMENT " " $comment \
+	GPSDATA " " $gpsdata \
 2> "$HOME"/tmp/add_exif/.dialogout
+
+rm -rf "$HOME"/.add_exif.config/menu
+for A in $(cat "$HOME"/tmp/add_exif/.dialogout); do
+	echo $A >> "$HOME"/.add_exif.config/menu
+done
+
 
 for Y in $(cat "$HOME"/tmp/add_exif/.list); do
   exiv2 -dx "$Y"
@@ -2607,17 +3096,4 @@ case $1 in
      -debug)DEBUG=Y ; RUN $DEBUG;;
 	  *)RUN $DEBUG;;
 esac
-
-#echo "running RUN $1"
-#RUN $1
-
-
-
-#aperture, speed, date, time, program, lens, + iso, photographer, software, camera, film
-#filnamnsproblem, om fil med samma namn, men olika extension ska ha samma data.
-
-
-
-
-
 
