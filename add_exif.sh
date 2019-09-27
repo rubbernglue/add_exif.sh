@@ -1,13 +1,5 @@
 #!/bin/bash
 
-################################################################
-#
-# Fixa / Adda:
-# 
-# Posibility to type time (hour:minute) without colons...
-#
-################################################################
-
 declare DIR=$(dirname "$LIST" | sed s/\'//g)
 
 
@@ -1109,7 +1101,9 @@ if [ ! -z "$MA" ]
 		then dialog --title "No film type" --yesno "Manufacturer selected but no type.
 Add a new type to the library and add it to your files?" 0 0
 		     case $? in
-			0)return 1;;
+			0)return 1
+                	  echo "$MA" > $HOME/tmp/add_exif/film 
+			;;
 			1)echo 'no...';;
 		     esac
 		else echo "$MA?$MO" > $HOME/tmp/add_exif/film
@@ -1269,7 +1263,7 @@ MO='~'
 
 if [ ! -e "$HOME"/.add_exif.config/dev ]
 	then SHOW='Ex. Compard R09 One Shot'
-	else SHOW=`cat "$HOME"/.add_exif.config/dev|cut -d'?' -f1`
+	else SHOW=`cat "$HOME"/.add_exif.config/dev|cut -d'?' -f1|sort|uniq`
 	     SHOW="Added allready:
 $SHOW"
 fi
@@ -1282,7 +1276,7 @@ $SHOW
 
 if [ ! -e "$HOME"/.add_exif.config/dev ]
 	then SHOW='Ex. Continous agitation, 60 min'
-	else SHOW=`cat "$HOME"/.add_exif.config/dev|cut -d'?' -f2`
+	else SHOW=`cat "$HOME"/.add_exif.config/dev|grep "$MA"|cut -d'?' -f2`
 	     SHOW="Added allready:
 $SHOW"
 fi
@@ -1337,7 +1331,9 @@ if [ ! -z "$MA" ]
 Add a new technique to the library and add it to your files?" 0 0
 		     case $? in
 			0)return 1;;
-			1)echo 'no...';;
+			1)echo 'no...'
+                          echo "$MA?0" > $HOME/tmp/add_exif/dev
+			;;
 		     esac
 		else echo "$MA?$MO" > $HOME/tmp/add_exif/dev
 	fi
@@ -1367,6 +1363,7 @@ case $ANS in
       0)if [ "${#MAKE}" -gt "2" -a "${#MODEL}" -gt "2" ]
 		then sed --in-place '/Exif.Photo.UserComment\ Developed:/d' "$DIR"/script.$FILENAME.out
 		     MAKE=`echo $MAKE|sed 's/_/ /g'`
+                     MODEL=`echo $MODEL|sed 's/_/ /g'`
 #		     echo "exiv2 -M\"set Exif.Image.Make $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		     echo "exiv2 -M\"add Exif.Photo.UserComment Developed: $MAKE $MODEL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
@@ -1380,7 +1377,7 @@ case $ANS in
 	if [ "${#MAKE}" -gt "1" -a "${#MODEL}" -lt "2" ]
 		then sed --in-place '/Exif.Photo.UserComment\ Developed:/d' "$DIR"/script.$FILENAME.out
 		     MODEL=`echo $MODEL|sed 's/_/ /g'`
-		     echo "exiv2 -M\"set Exif.Image.Model $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+#		     echo "exiv2 -M\"set Exif.Image.Model $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		     echo "exiv2 -M\"add Exif.Photo.UserComment Developed: $MAKE\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		     if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
 		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
@@ -1512,7 +1509,7 @@ MO='~'
 
 if [ ! -e "$HOME"/.add_exif.config/cameras ]
 	then SHOW='Ex. Nikon'
-	else SHOW=`cat "$HOME"/.add_exif.config/cameras|cut -d'?' -f1`
+	else SHOW=`cat "$HOME"/.add_exif.config/cameras|cut -d'?' -f1|sort|uniq`
 	     SHOW="Added allready:
 $SHOW"
 fi
@@ -1709,14 +1706,13 @@ if [ -z "$OUT" ]
 		       sed --in-place '/Exif.GPSInfo/d' "$DIR"/script.$FILENAME.out
 		       sed --in-place '/GPS\ Data:/d' "$DIR"/script.$FILENAME.out
 		       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
-		   echo "$FILENAME ..."
+#		   echo "$FILENAME ..."
 		   echo 1
 		   echo " 
 # GPS Data:"  >> "$DIR"/script.$FILENAME.out
-		   sed --in-place '/Exif.GPSInfo/d' "$X"
-		   sed --in-place '/GPS\ Data:/d' "$X"
-		   sed --in-place '/GPS\ End./d' "$X"
-		   echo 2
+#		   sed --in-place '/Exif.GPSInfo/d' "$X"
+#		   sed --in-place '/GPS\ Data:/d' "$X"
+#		   sed --in-place '/GPS\ End./d' "$X"
 		   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 		   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 		   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GNS\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
@@ -1786,9 +1782,9 @@ if [ -z "$OUT" ]
 	       sed --in-place '/GPS\ End./d' "$DIR"/script.$FILENAME.out
 	   echo " 
 # GPS Data:"  >> "$DIR"/script.$FILENAME.out
-	   sed --in-place '/Exif.GPSInfo/d' "$X"
-	   sed --in-place '/GPS\ Data:/d' "$X"
-	   sed --in-place '/GPS\ End./d' "$X"
+#	   sed --in-place '/Exif.GPSInfo/d' "$X"
+#	   sed --in-place '/GPS\ Data:/d' "$X"
+#	   sed --in-place '/GPS\ End./d' "$X"
 	   APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
 	   echo "exiv2 -M\"del Exif.GPSInfo.GPSLatitudeRef\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
 	   echo "exiv2 -M\"add Exif.GPSInfo.GPSLatitudeRef $GPS1\" modify        $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
@@ -2267,7 +2263,7 @@ fi
 This is only to keep track of which number in a
 sequence a sheet or roll has.
 
-          $FULLNAME
+          $FULLNAME ...
 " 0 0 $INPUT --output-fd 1)
 fi
 
@@ -2857,27 +2853,55 @@ rm -rf "$HOME"/tmp/add_exif/.remove.* >/dev/null
 
 RUN () {
 	rm -rf "$HOME"/tmp/add_exif/.remove 2>/dev/null
-TOP='Selecting and listing images in your dir'
-TIF=$(ls -l *.tif | wc -l)
+#TOP='Selecting and listing images in your dir'
+#TIF=$(ls -l *.tif | wc -l)
 
-	   if [ "$TIF" = 0 ]
-	    then CMD='/bin/ls *.jpg'
-	    else CMD='/bin/ls *.tif'
-	   fi
-	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to select files
+#	   if [ "$TIF" = 0 ]
+#	    then CMD='/bin/ls *.jpg'
+#	    else CMD='/bin/ls *.tif'
+#	   fi
+#	   dialog --title "$TOP" --inputbox "You are in `pwd` Type command to select files
 
-examples...
+#examples...
 
-*.tif (default)
-DSC_{0034..0048}.tif
-{0045_delta400.tif,0051_tmax100.jpg}
+#*.tif (default)
+#DSC_{0034..0048}.tif
+#{0045_delta400.tif,0051_tmax100.jpg}
 
-" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
-	   if [ "$?" = 1 ]
-	     then echo "Pressed 'Cancel'"
-		  exit 0
-	   fi
-	   sh "$HOME"/tmp/add_exif/.command
+#" 0 0 "$CMD > $HOME/tmp/add_exif/.list" 2>$HOME/tmp/add_exif/.command
+#	   if [ "$?" = 1 ]
+#	     then echo "Pressed 'Cancel'"
+#		  exit 0
+#	   fi
+
+#       then for X in $(ls *.tif); do file "$X" && LIST=`echo $LIST $X "~" on`; done
+
+LIST=""
+if [ `ls *.tif|wc -l` != 0 ]
+       then for X in $(ls *.tif); do if [ -e "$X" ] ; then LIST=$(echo $LIST $X "~" on) ; fi ; done
+       else for X in $(ls *.{jpg,JPG,TIF,tiff,TIFF,dng,DNG,pef,PEF,PNG,png,JP2,jp2,nef,NEF}); do if [ -e "$X" ] ; then LIST=`echo $LIST $X "~" on`; fi ; done
+fi
+
+#echo "LIST $LIST"
+#read
+
+
+/usr/bin/dialog --title "add_exif.sh" --checklist "Chose image files
+
+Note: files with spaces does not work yet!
+" 0 50 10 $LIST --output-fd 1 |sed 's/ /\ \n/g'> $HOME/tmp/add_exif/.list || break
+
+
+
+
+sh "$HOME"/tmp/add_exif/.command
+
+
+
+
+
+
+
 
 	   dialog --title "Execute for..." --yesno "Does this look ok?
 
@@ -2955,6 +2979,13 @@ grep PHOTOGRAPHER "$HOME"/.add_exif.config/menu && photographer=on || photograph
 grep COMMENT "$HOME"/.add_exif.config/menu && comment=on || comment=off
 grep GPSDATA "$HOME"/.add_exif.config/menu && gpsdata=on || gpsdata=off
 
+if [ ! -e "$HOME"/.add_exif.config/menu ]
+	then dialog --title "No previous menu settings found" --yesno "Select all?" 7 40 
+		if [ $? = 0 ]
+			then date=on ; program=on ; aperture=on ; speed=on ; lensmodel=on ; iso=on ; film=on ; development=on ; rollnr=on ; camera=on ; software=on ; photographer=on ; comment=on ; gpsdata=on
+		fi
+fi
+
 
 #Removed. Only adding focal length, which is added alongside LENSMODEL
 #        LENS "Focallength only" $lens \
@@ -3010,8 +3041,12 @@ If you prefer to run these later, you can simply
 restart this script and unchecking the dialogboxes
 in mainmenu, or simply executing them manually:
 
-sh script.FOOBAR.out
+exiv2 rm FOOBAR.jpg   <-- removes all exif from file
+sh script.FOOBAR.out  <-- execute script to add  to file
 " 0 0 0 "1" "Execute ALL generated script-files in dir" "0" "Menu-list for each script" --output-fd 1)
+
+#echo debug
+#read
 
 case $FIN in
 0) for pkg in $(ls $DIR/script.*)
@@ -3025,12 +3060,14 @@ case $FIN in
  
 
    while choise=`/usr/bin/dialog --stdout --menu "Items:" 0 45 0 $pkglist`; do
+#   echo 1 ; read
    if [ $? = 1 ]
      then break
    fi
 
 # clean file prior to exifiation
    dialog --title "Remove existing exif in files" --yesno "Clean files before execute script?" 7 40 
+ #  echo 2 ; read
    if [ $? = 0 ]
      then clear
           EXIVDEL=$(exiv2 delete `echo $choise | sed 's/script\.//g;s/\.out/\.\*/g'`)
