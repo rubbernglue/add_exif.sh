@@ -360,8 +360,10 @@ do
 	esac
 	sed --in-place '/Photo.ExposureProgram/d' "$DIR"/script.$FILENAME.out
         APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
-	echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
-        echo "exiv2 -M\"set Exif.Photo.ExposureProgram "$MODE"\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+        if [ "$MODE" -ge 1 ]; then
+		echo "exiv2 -M\"del Exif.Photo.ExposureProgram\"       $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	        echo "exiv2 -M\"set Exif.Photo.ExposureProgram "$MODE"\" $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
+	fi
 	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
 	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
@@ -496,7 +498,7 @@ for X in $(cat $HOME/tmp/add_exif/.list);
 do
   FULLNAME=$(basename "$X")
   FILENAME="${FULLNAME%.*}"
-DEKLARERAD  DIR=$(dirname $X | se\'//g)
+#DEKLARERAD DIR=$(dirname $X | se\'//g)
 
 if [ -e "$HOME"/tmp/add_exif/.aperture ]
 	then SP=`cat $HOME/tmp/add_exif/.aperture|awk '{print $1}'`
@@ -513,7 +515,10 @@ $FILENAME
 	else OUT="$SP"
 fi
 
-if [ `cat $HOME/tmp/add_exif/.list|wc -l` -gt "1" ]
+#cat $HOME/tmp/add_exif/.list|wc -l
+#read bah
+
+if [ `cat $HOME/tmp/add_exif/.list|wc -l` -ge "1" ]
 	then if [ $ALL = N -a $ASK = N ]
 		then $(dialog --title "Aperture" --defaultno --yesno "Same setting for all?" 0 0 --output-fd 1)
 			if [ $? = 0 ]
@@ -531,7 +536,7 @@ if [ `echo $OUT|grep "\."|wc -l` = 1 -o `echo $OUT|grep \,|wc -l` = 1 ]
 	then OUT="`echo $OUT|cut -d\/ -f2|sed 's/\.//g ; s/,//g'`/10"
 	else OUT="`echo $OUT|cut -d\/ -f2`/1"
 fi
-	 if [ "$OUT" = "X" ]
+	 if [ "$OUT" = "X" -o "$OUT" = "X/1" ]
 	   then echo "skipping..."
 	   else sed --in-place '/Exif.Photo.FNumber/d' "$DIR"/script.$FILENAME.out
 		APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
@@ -574,6 +579,7 @@ fi
 OUT=$(dialog --title "Shutterspeed" --inputbox "Example:
 - 1/125 exposure is simply written 1/125
 - 10 second exposure is written 10/1
+- 1,5 second exposure is written 15/10
 - Type X do skip this file.
 
 $FILENAME
@@ -889,7 +895,7 @@ fi
 
 $FILENAME
 
-ex. 75 or 75mm
+ex. 75 or 75mm or leave blank to skip.
 " 0 0 "$FOCALL" --output-fd 1)
 			if [ ! -z "$FOCALL" ]
 			  then FOCALL=`echo $FOCALL|sed 's/mm//g'`
@@ -901,7 +907,7 @@ ex. 75 or 75mm
 		   	  else  if [ `grep Exif.Photo.FocalLength "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]
                            		then echo "FocalLength `echo $F3` NOT added to exif!"
 				fi
-		   		sleep 1
+		   		#sleep 1
 			fi
 		fi
 
@@ -1054,7 +1060,7 @@ $SHOW
 
 if [ ! -e "$HOME"/.add_exif.config/film ]
 	then SHOW='Ex. HP5+ 400'
-	else SHOW=`cat "$HOME"/.add_exif.config/film|cut -d'?' -f2`
+	else SHOW=`cat "$HOME"/.add_exif.config/film|grep "$MA"|cut -d'?' -f2`
 	     SHOW="Added allready:
 $SHOW"
 fi
@@ -1128,6 +1134,10 @@ ANS=$?
 for X in $(cat $HOME/tmp/add_exif/.choise)
 do FULLNAME=$(basename "$X")
    FILENAME="${FULLNAME%.*}"
+
+MAKE=`echo $MAKE|sed 's/_/ /g'`
+MODEL=`echo $MODEL|sed 's/_/ /g'`
+
 
 case $ANS in
       0)if [ "${#MAKE}" -gt "2" -a "${#MODEL}" -gt "2" ]
@@ -1490,7 +1500,7 @@ fi
 
 rm -rf "$HOME"/tmp/add_exif/.choise
 
-echo bah
+#echo bah
 CHOISE=$(/usr/bin/dialog --checklist "CAM MODEL" 0 0 0 $pkglist --output-fd 1 )
 
 if [ -z "$CHOISE" ]
@@ -1543,14 +1553,17 @@ MAKER=""
 MODEL=""
 MO='~'
 MA='~'
-for pkg in $(cut -d'?' -f1 "$HOME"/.add_exif.config/cameras|sort|uniq)
+for pkg in $(cut -d'?' -f1 "$HOME"/.add_exif.config/cameras|sort|uniq|sed 's/ /_/g')
 	do MAKER="$MAKER $pkg -"
 done
 MA=$(/usr/bin/dialog --stdout --title "Manufacturer" --menu "Camera MANUFACTURER:" 0 0 0 $MAKER --output-fd 1)
+#echo $MA
+#read bah
+#exit 0
 
 if [ ! -z "$MA" ]
   then pkg=""
-	for pkg in $(grep "$MA" "$HOME"/.add_exif.config/cameras|cut -d'?' -f2|sort|sed 's/ /_/g')
+	for pkg in $(grep "`echo $MA|sed 's/_/ /g'`" "$HOME"/.add_exif.config/cameras|cut -d'?' -f2|sort|sed 's/ /_/g')
 		do MODEL="$MODEL $pkg -"
 	done
 
@@ -1598,7 +1611,7 @@ case $ANS in
 		     fi
 		else echo else ; read BAH
 	fi
-	if [ "${#MODEL}" -gt "1" -a "$MODEL" != " " ]
+	if [ "${#MODEL}" -ge "1" -a "$MODEL" != " " ]
 	        then sed --in-place '/Exif.Image.Model/d' "$DIR"/script.$FILENAME.out
 		     MODEL=`echo $MODEL|sed 's/_/ /g'`
 		     echo "exiv2 -M\"set Exif.Image.Model $MODEL\" modify $DIR/$FILENAME*.$APPLYON" >> "$DIR"/script.$FILENAME.out
@@ -1684,16 +1697,33 @@ OUT=`cat $HOME/tmp/add_exif/.gps | sed -e 's/^[ \t]*//'`
 if [ -z "$OUT" ]
   then echo "NO..." ; OUT=NOGPS
   else echo "YES!";
-  case "$OUT" in
-	[0-9][0-9]\ [0-9][0-9]\ [0-9]*\.[0-9]*[NS]*[WE])
-		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
+
+
+
+
+###### 60 10 11.5N 024 57 06.4E ######
+#### 48°51'29.60\"N 2°17'36.90\"E ####
+
+if [[ "$OUT" =~ ^[0-9]{1,2}\ [0-9]{1,2}\ [0-9]{1,2}\.[0-9]{1,2}[N,S]\ [0-9]{1,3}\ [0-9]{1,2}\ [0-9]{1,2}\.[0-9]{1,2}[W,E]$ ]]
+  then		 G1=`echo "$OUT"|awk '{print $1}'|awk '{print $0"/1"}'|sed 's/^0//'`
+  		 if [ `echo "$OUT"|awk '{print $2}'` = "0" ]
+		 	then G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'`
+		 	else G2=`echo "$OUT"|awk '{print $2}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 fi
 		 G3=`echo "$OUT"|awk '{print $3}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
 		 G4=`echo "$OUT"|awk '{print $4}'|awk '{print $0"/1"}'|sed 's/^0//'`
-		 G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'|sed 's/^0//'`
+  		 if [ `echo "$OUT"|awk '{print $5}'` = "0" ]
+		 	then G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'`
+		 	else G5=`echo "$OUT"|awk '{print $5}'|awk '{print $0"/1"}'|sed 's/^0//'`
+		 fi
 		 G6=`echo "$OUT"|awk '{print $6}'|sed 's/\.//g'|cut -c -3|awk '{print $0"/10"}'|sed 's/^0//'`
 		GNS=`echo "$OUT"|awk '{print $3}'|rev|cut -c -1`
 		GWE=`echo "$OUT"|awk '{print $6}'|rev|cut -c -1`
+
+#echo "OUT $OUT"
+#echo "G1=$G1 G2=$G2 G3=$G3"
+#read
+#exit 0
 
 #		echo "before $choise"
 		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
@@ -1727,11 +1757,19 @@ if [ -z "$OUT" ]
 		       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
 			    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
 		fi
-		done ;;
-   [NS]\ ??\ ??\ ????\ [WE]\ ??\ ??\ ???)
-		GPS1=`echo "$OUT" | awk '{print $1}'`
+	      	done
+  else echo "nope.."
+ fi
+
+
+
+
+###### N 64 32 5.3, E 12 24 3.6 #######
+
+if [[ "$OUT" =~ ^[N,S]\ [0-9]{1,2}\ [0-9]{1,2}\ [0-9]{1,2}\.[0-9]{1,2}\,\ [W,E]\ [0-9]{1,2}\ [0-9]{1,2}\ [0-9]{1,2}\.[0-9]{1,2}$ ]]
+  then	        GPS1=`echo "$OUT" | awk '{print $1}'`
 		GPS2=`echo "$OUT" | awk '{print $2}'`
-		echo 4a
+#		echo 4a
 		if [ "$GPS2" = `echo "$GPS2" | sed 's/\.//g'` ]
 		  then BY1=1
 		  else BY1=10
@@ -1742,14 +1780,14 @@ if [ -z "$OUT" ]
 		  then BY2=1
 		  else BY2=10
 		fi
-                echo 4b
+#                echo 4b
 		GPS4=`echo "$OUT" | awk '{print $4}' | sed 's/,//g'`
 		if [ "$GPS4" = `echo "$GPS4" | sed 's/\.//g'` ]
 		  then BY3=1
 		  else BY3=10
 		       GPS4=`echo $GPS4 | sed 's/\.//g'`
 		fi
-                echo 4c
+#                echo 4c
 		GPS5=`echo "$OUT" | awk '{print $5}'`
 
 		GPS6=`echo "$OUT" | awk '{print $6}'`
@@ -1757,20 +1795,21 @@ if [ -z "$OUT" ]
 		  then BY4=1
 		  else BY4=10
 		fi
-                echo 4d
+#                echo 4d
 		GPS7=`echo "$OUT" | awk '{print $7}'`
 		if [ "$GPS7" = `echo "$GPS7" | sed 's/\.//g'` ]
 		  then BY5=1
 		  else BY5=10
 		fi
-                echo 4e
+#                echo 4e
 		GPS8=`echo "$OUT" | awk '{print $8}'`
 		if [ "$GPS8" = `echo "$GPS8" | sed 's/\.//g'` ]
 		  then BY6=1
 		  else BY6=10
 		       GPS8=`echo $GPS8 | sed 's/\.//g'`
 		fi
-	echo 5
+#	echo 5
+#read bah
 	choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
 	echo "$choise" > $HOME/tmp/add_exif/.gpslist
 	for LIST in `cat $HOME/tmp/add_exif/.gpslist`; do
@@ -1800,9 +1839,12 @@ if [ -z "$OUT" ]
 	fi
         echo 6
    done
-   ;;
-	*)dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ;;  
-  esac
+  else echo "nope"
+ fi
+
+if [ `grep GPSLatitude "$DIR"/script.$FILENAME.out|wc -l` -lt 1 ]; then dialog --title "Error" --msgbox 'The formating on that coordinate was WRONG, please start over.' 0 0 ; fi
+ 
+
 fi
 
 #read BAH
@@ -2404,6 +2446,7 @@ fi
 # sed -i "1icase $1 in *.NEF|*.pp3|*.out|*.bz2|*.xcf)exit 0 ;; esac" file
 }
 
+#deprecated
 FILMOLD () {
 
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
@@ -2882,9 +2925,13 @@ if [ `ls *.tif|wc -l` != 0 ]
        else for X in $(ls *.{jpg,JPG,TIF,tiff,TIFF,dng,DNG,pef,PEF,PNG,png,JP2,jp2,nef,NEF}); do if [ -e "$X" ] ; then LIST=`echo $LIST $X "~" on`; fi ; done
 fi
 
-#echo "LIST $LIST"
-#read
+if [ -z "$LIST" ]
+	then dialog --title 'Problem' --msgbox "There are no files in current folder	
+OR the files was filtered out because of white spaces in the filename.
 
+Press OK to exit." 0 0
+	exit 0
+fi
 
 /usr/bin/dialog --title "add_exif.sh" --checklist "Chose image files
 
@@ -2893,17 +2940,16 @@ Note: files with spaces does not work yet!
 
 
 
-
-sh "$HOME"/tmp/add_exif/.command
-
+#sh "$HOME"/tmp/add_exif/.command
 
 
 
 
+#read bah
 
 
 
-	   dialog --title "Execute for..." --yesno "Does this look ok?
+dialog --title "Execute for..." --yesno "Does this look ok?
 
 `cat "$HOME"/tmp/add_exif/.list`" 25 40
            if [ $? = 1 ]
@@ -3066,11 +3112,12 @@ case $FIN in
    fi
 
 # clean file prior to exifiation
+APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
    dialog --title "Remove existing exif in files" --yesno "Clean files before execute script?" 7 40 
  #  echo 2 ; read
    if [ $? = 0 ]
      then clear
-          EXIVDEL=$(exiv2 delete `echo $choise | sed 's/script\.//g;s/\.out/\.\*/g'`)
+          EXIVDEL=$(exiv2 delete `echo $choise$APPLYON | sed 's/script\.//g;s/\.out/\./g'`)
           if [ $? != 0 ]
 	    then echo "$?
 
