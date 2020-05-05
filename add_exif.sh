@@ -2,7 +2,6 @@
 
 declare DIR=$(dirname "$LIST" | sed s/\'//g)
 
-
 rm -f "$HOME"/tmp/add_exif/.* 2>/dev/null
 
 REM1=`file "$HOME"/tmp/add_exif/.remove`
@@ -46,6 +45,8 @@ Any questions? Please contact me at johan.g.lindgren@gmail.com
 " 25 50
 
 fi
+
+NUM=$RANDOM ; if [ ! -e .$NUM ]; then touch .$NUM 2>/dev/null && rm .$NUM || dialog --title "ERROR" --msgbox "No permission to write in dir!!" 7 40 ; fi
 
 mkdir -p $HOME/.add_exif.config
 mkdir -p $HOME/tmp/add_exif
@@ -2921,8 +2922,22 @@ RUN () {
 
 LIST=""
 if [ `ls *.tif|wc -l` != 0 ]
-       then for X in $(ls *.tif); do if [ -e "$X" ] ; then LIST=$(echo $LIST $X "~" on) ; fi ; done
-       else for X in $(ls *.{jpg,JPG,TIF,tiff,TIFF,dng,DNG,pef,PEF,PNG,png,JP2,jp2,nef,NEF}); do if [ -e "$X" ] ; then LIST=`echo $LIST $X "~" on`; fi ; done
+       then for X in $(ls *.tif); do if [ -e "$X" ] ; then
+							FULLNAME=$(basename "$X")
+							FILENAME="${FULLNAME%.*}"
+							if [ -e script.$FILENAME.out ]
+							  then EXIST=o
+							  else EXIST="~"
+							fi
+							LIST=$(echo $LIST $X "$EXIST" on) ; fi ; done
+       else for X in $(ls *.{jpg,JPG,TIF,tiff,TIFF,dng,DNG,pef,PEF,PNG,png,JP2,jp2,nef,NEF}); do if [ -e "$X" ] ; then
+							FULLNAME=$(basename "$X")
+							FILENAME="${FULLNAME%.*}"
+							if [ -e script.$FILENAME.out ]
+							  then EXIST=o
+							  else EXIST="~"
+							fi
+							LIST=`echo $LIST $X "$EXIST" on`; fi ; done
 fi
 
 if [ -z "$LIST" ]
