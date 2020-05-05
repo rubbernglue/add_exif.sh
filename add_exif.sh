@@ -1884,6 +1884,13 @@ rm -rf /$HOME/tmp/add_exif/.iso
 while true; do
 
 pkglist=""
+
+dialog --title "Repeat for all?" --yesno "ISO, Mark all in list?" 0 0 --output-fd 1
+case $? in
+ 0)ACT=on ;;
+ 1)ACT=off ;;
+esac
+
 for pkg in $(cat $HOME/tmp/add_exif/.list); do
 	FULLNAME=$(basename "$pkg")
 	FILENAME="${FULLNAME%.*}"
@@ -1891,7 +1898,7 @@ for pkg in $(cat $HOME/tmp/add_exif/.list); do
 		then OPT=`grep 'set Exif.Photo.ISOSpeedRatings' "$DIR"/script.$FILENAME.out|awk '{print $4}'|sed 's/\"//g'`
 		else OPT='~'
 	fi
-	pkglist="$pkglist $pkg $OPT off "
+	pkglist="$pkglist $pkg $OPT $ACT "
 done
 
 choise=$(/usr/bin/dialog --checklist "ISO:
