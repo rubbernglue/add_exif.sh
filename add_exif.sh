@@ -944,7 +944,7 @@ if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]
 #Loop to return to menu after being done with the first lens.
 
 	if [ `cat $HOME/tmp/add_exif/.list|wc -l` != `cat $HOME/tmp/add_exif/.lenslist|wc -l` ]
-		then dialog --title "Lenses" --yesno "Add lenses?" 0 0
+		then dialog --title "Lenses" --yesno "LENSES: Add more?" 0 0
 		if [ $? = 0 ]
 		   then ADDLENS
 		   else break
@@ -1026,7 +1026,7 @@ fi
 
 rm -rf "$HOME"/tmp/add_exif/.choise
 
-echo bah
+#echo bah
 CHOISE=$(/usr/bin/dialog --checklist "Film" 0 0 0 $pkglist --output-fd 1 )
 
 if [ -z "$CHOISE" ]
@@ -1870,10 +1870,76 @@ fi
 }
 
 
-
-
-
 ISO () {
+if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
+then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
+       sed --in-place '/ISOSpeedRatings/d' "$DIR"/"$X"
+     done
+else
+
+rm -rf /$HOME/tmp/add_exif/.iso
+
+########
+
+while true; do
+
+pkglist=""
+for pkg in $(cat $HOME/tmp/add_exif/.list); do
+	FULLNAME=$(basename "$pkg")
+	FILENAME="${FULLNAME%.*}"
+	if [ `grep 'set Exif.Photo.ISOSpeedRatings' "$DIR"/script.$FILENAME.out|wc -l` -ge 1 ]
+		then OPT=`grep 'set Exif.Photo.ISOSpeedRatings' "$DIR"/script.$FILENAME.out|awk '{print $4}'|sed 's/\"//g'`
+		else OPT='~'
+	fi
+	pkglist="$pkglist $pkg $OPT off "
+done
+
+choise=$(/usr/bin/dialog --checklist "ISO:
+
+Chose one or more files FOR EACH iso setting
+
+" 0 0 0 $pkglist --output-fd 1) || break
+
+dialog --title "List of files" --inputbox "Set ISO for
+
+$choise
+
+" 0 0 " " 2>$HOME/tmp/add_exif/.iso
+
+# sed removed empty spaces in the beginning of string:
+OUT=`cat $HOME/tmp/add_exif/.iso | sed -e 's/^[ \t]*//'`
+
+if [ -z "$OUT" ]
+  then echo "NO..." ; OUT=NOISO
+  else echo "YES!";
+  		#Filtrera bort " och \ när specialtecken finns i filnamnet:
+		choise=$(echo $choise | tr " " "\n"|sed 's/\"//g; s/\\//g')
+		echo "$choise" > $HOME/tmp/add_exif/.isolist
+		for LIST in `cat $HOME/tmp/add_exif/.isolist`; do
+		FULLNAME=$(basename "$LIST")
+		FILENAME="${FULLNAME%.*}"
+	if [ `grep '#!/bin/bash' "$DIR"/script.$FILENAME.out|wc -l` -eq 0 ]
+	       then sed --in-place '1 i shopt -s nullglob' "$DIR"/script.$FILENAME.out
+		    sed --in-place '1 i \#\!\/bin\/bash' "$DIR"/script.$FILENAME.out
+	fi
+		       sed --in-place '/ISOSpeedRatings/d' "$DIR"/script.$FILENAME.out
+		       APPLYON=`cat "$HOME"/.add_exif.config/apply_on`
+		   echo "exiv2 -M\"set Exif.Photo.ISOSpeedRatings $OUT\" modify $DIR/$FILENAME*.$APPLYON" >>"$DIR"/script.$FILENAME.out
+#   "  >> "$DIR"/script.$FILENAME.out
+		done
+fi
+
+done
+
+	if [ $? = 2 ]
+	  then exit 0
+	fi 
+fi
+}
+
+
+
+ISOOLD () {
 if [ -e "$HOME"/tmp/add_exif/.remove.list -a -e "$HOME"/tmp/add_exif/.remove ]  
 then for X in `cat $HOME/tmp/add_exif/.remove.list`; do
        sed --in-place '/pulled\ to/d' "$X"
